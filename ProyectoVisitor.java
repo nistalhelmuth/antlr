@@ -16,23 +16,25 @@ public interface ProyectoVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitProgram(ProyectoParser.ProgramContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProyectoParser#classDeclaration}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitClassDeclaration(ProyectoParser.ClassDeclarationContext ctx);
-	/**
 	 * Visit a parse tree produced by {@link ProyectoParser#declaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitDeclaration(ProyectoParser.DeclarationContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProyectoParser#varDeclaration}.
+	 * Visit a parse tree produced by the {@code commonVarDeclaration}
+	 * labeled alternative in {@link ProyectoParser#varDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitVarDeclaration(ProyectoParser.VarDeclarationContext ctx);
+	T visitCommonVarDeclaration(ProyectoParser.CommonVarDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code arrayVarDeclaration}
+	 * labeled alternative in {@link ProyectoParser#varDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArrayVarDeclaration(ProyectoParser.ArrayVarDeclarationContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProyectoParser#structDeclaration}.
 	 * @param ctx the parse tree
@@ -58,11 +60,19 @@ public interface ProyectoVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitMethodType(ProyectoParser.MethodTypeContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProyectoParser#parameter}.
+	 * Visit a parse tree produced by the {@code commonParameter}
+	 * labeled alternative in {@link ProyectoParser#parameter}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitParameter(ProyectoParser.ParameterContext ctx);
+	T visitCommonParameter(ProyectoParser.CommonParameterContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code arrayParameter}
+	 * labeled alternative in {@link ProyectoParser#parameter}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArrayParameter(ProyectoParser.ArrayParameterContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProyectoParser#parameterType}.
 	 * @param ctx the parse tree
@@ -76,11 +86,54 @@ public interface ProyectoVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitBlock(ProyectoParser.BlockContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProyectoParser#statement}.
+	 * Visit a parse tree produced by the {@code ifStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitStatement(ProyectoParser.StatementContext ctx);
+	T visitIfStatement(ProyectoParser.IfStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code whileStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWhileStatement(ProyectoParser.WhileStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code returnStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitReturnStatement(ProyectoParser.ReturnStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code methodCallStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMethodCallStatement(ProyectoParser.MethodCallStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code blockStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBlockStatement(ProyectoParser.BlockStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code locationStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLocationStatement(ProyectoParser.LocationStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionStatement}
+	 * labeled alternative in {@link ProyectoParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionStatement(ProyectoParser.ExpressionStatementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProyectoParser#location}.
 	 * @param ctx the parse tree
@@ -88,11 +141,54 @@ public interface ProyectoVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitLocation(ProyectoParser.LocationContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProyectoParser#expression}.
+	 * Visit a parse tree produced by the {@code expressionLiteral}
+	 * labeled alternative in {@link ProyectoParser#expression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitExpression(ProyectoParser.ExpressionContext ctx);
+	T visitExpressionLiteral(ProyectoParser.ExpressionLiteralContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionNegative}
+	 * labeled alternative in {@link ProyectoParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionNegative(ProyectoParser.ExpressionNegativeContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionNot}
+	 * labeled alternative in {@link ProyectoParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionNot(ProyectoParser.ExpressionNotContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionLocation}
+	 * labeled alternative in {@link ProyectoParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionLocation(ProyectoParser.ExpressionLocationContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionGroup}
+	 * labeled alternative in {@link ProyectoParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionGroup(ProyectoParser.ExpressionGroupContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionMethodCall}
+	 * labeled alternative in {@link ProyectoParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionMethodCall(ProyectoParser.ExpressionMethodCallContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expressionCommon}
+	 * labeled alternative in {@link ProyectoParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpressionCommon(ProyectoParser.ExpressionCommonContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ProyectoParser#methodCall}.
 	 * @param ctx the parse tree
@@ -130,9 +226,24 @@ public interface ProyectoVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitCondOp(ProyectoParser.CondOpContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ProyectoParser#literal}.
+	 * Visit a parse tree produced by the {@code intLiteral}
+	 * labeled alternative in {@link ProyectoParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitLiteral(ProyectoParser.LiteralContext ctx);
+	T visitIntLiteral(ProyectoParser.IntLiteralContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code charLiteral}
+	 * labeled alternative in {@link ProyectoParser#literal}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCharLiteral(ProyectoParser.CharLiteralContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code boolLiteral}
+	 * labeled alternative in {@link ProyectoParser#literal}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBoolLiteral(ProyectoParser.BoolLiteralContext ctx);
 }

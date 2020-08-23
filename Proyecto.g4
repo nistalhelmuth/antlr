@@ -1,16 +1,18 @@
 grammar Proyecto;
 
-program : classDeclaration+;
+import ProyectoTokens;
 
-classDeclaration : 'class' 'Program' '{' (declaration)* '}';
+// program : classDeclaration+;
 
-declaration : structDeclaration
-  | varDeclaration
-  | methodDeclaration
+program : 'class' 'Program' '{' (declaration)* '}';
+
+declaration : structDeclaration      
+  | varDeclaration                   
+  | methodDeclaration                
   ;
 
-varDeclaration : varType ID ';' 
-  | varType ID '[' NUM ']' ';'
+varDeclaration : varType ID ';'       # commonVarDeclaration
+  | varType ID '[' NUM ']' ';'        # arrayVarDeclaration
   ;
 
 structDeclaration : 'struct' ID '{' (varDeclaration)* '}';
@@ -18,8 +20,8 @@ structDeclaration : 'struct' ID '{' (varDeclaration)* '}';
 varType : 'int'
   | 'char'
   | 'boolean'
-  | 'struct' ID
-  | structDeclaration
+  | 'struct' ID                         
+  | structDeclaration                   
   | 'void'
   ;
 
@@ -31,8 +33,8 @@ methodType : 'int'
   | 'void'
   ;
 
-parameter : parameterType ID
-  | parameterType ID '[' ']'
+parameter : parameterType ID            # commonParameter
+  | parameterType ID '[' ']'            # arrayParameter
   ;
 
 parameterType : 'int'
@@ -42,32 +44,32 @@ parameterType : 'int'
 
 block : '{' (varDeclaration)* (statement)* '}';
 
-statement : 'if' '(' expression ')' block ('else' block)?
-  | 'while' '(' expression ')' block
-  | 'return' (expression)? ';'
-  | methodCall ';'
-  | block
-  | location '=' expression
-  | (expression)? ';'
+statement : 'if' '(' expression ')' block ('else' block)?   # ifStatement
+  | 'while' '(' expression ')' block                        # whileStatement
+  | 'return' (expression)? ';'                              # returnStatement
+  | methodCall ';'                                          # methodCallStatement
+  | block                                                   # blockStatement
+  | location '=' expression                                 # locationStatement
+  | (expression)? ';'                                       # expressionStatement
   ;
 
 location : (ID | ID '[' expression ']') ('.' location)?;
 
-expression : location
-  | methodCall
-  | literal
-  |<assoc=right> expression op expression
-  | '-' expression
-  | '!' expression
-  | '(' expression ')'
+expression : location                                       # expressionLocation
+  | methodCall                                              # expressionMethodCall
+  | literal                                                 # expressionLiteral
+  |<assoc=right> expression op expression                   # expressionCommon
+  | '-' expression                                          # expressionNegative
+  | '!' expression                                          # expressionNot
+  | '(' expression ')'                                      # expressionGroup
   ;
 
 methodCall : ID '(' (expression)? (',' expression)* ')';
 
-op : arithOp
-  | relOp
-  | eqOp
-  | condOp
+op : arithOp                
+  | relOp                   
+  | eqOp                    
+  | condOp                  
   ;
 
 arithOp : '+'
@@ -91,27 +93,7 @@ condOp : '&&'
   | '||'
   ;
 
-literal : NUM
-  | BOOL
-  | CHAR
+literal : NUM        # intLiteral
+  | CHAR             # charLiteral
+  | BOOL             # boolLiteral
   ;
-
-//intLiteral : NUM;
-
-CHAR : '\''.*?'\''; //arreglar esto
-
-BOOL : 'true'| 'false';
-
-ID : LETTER (LETTER|DIGIT)*;
-
-NUM : DIGIT (DIGIT)*;
-
-ALL : .*?;
-
-LETTER : [a-zA-Z];
-
-DIGIT : [0-9]+;
-
-WHITE : [ \t\n]+ -> skip ; // skip spaces, tabs, newlines
-
-LINE_COMMENT : '//' .*? '\n' -> skip ;
