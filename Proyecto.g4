@@ -17,29 +17,29 @@ varDeclaration : varType ID ';'       # commonVarDeclaration
 
 structDeclaration : 'struct' ID '{' (varDeclaration)* '}';
 
-varType : 'int'
+varType : type=('int'
   | 'char'
   | 'boolean'
+  | 'void')
   | 'struct' ID                         
   | structDeclaration                   
-  | 'void'
   ;
 
 methodDeclaration : methodType ID '(' (parameter)? (',' parameter)* ')' block;
 
-methodType : 'int'
+methodType : type=('int'
   | 'char'
   | 'boolean'
-  | 'void'
+  | 'void')
   ;
 
 parameter : parameterType ID            # commonParameter
   | parameterType ID '[' ']'            # arrayParameter
   ;
 
-parameterType : 'int'
+parameterType : type=('int'
   | 'char'
-  | 'boolean'
+  | 'boolean')
   ;
 
 block : '{' (varDeclaration)* (statement)* '}';
@@ -66,34 +66,34 @@ expression : location                                       # expressionLocation
 
 methodCall : ID '(' (expression)? (',' expression)* ')';
 
-op : arithOp                
+op : arithOp                     
   | relOp                   
   | eqOp                    
-  | condOp                  
+  | condOp
   ;
 
-arithOp : '+'
+arithOp : simbol=('+'
   | '-'
   | '*'
   | '/'
-  | '%'
+  | '%')
   ;
 
-relOp : '<'
+relOp : simbol=('<'
   | '>'
   | '<='
-  | '>='
+  | '>=')
   ;
 
-eqOp : '=='
-  | '!='
+eqOp : simbol=('=='
+  | '!=')
   ;
 
-condOp : '&&'
+condOp : 'simbol=(&&'
   | '||'
   ;
 
-literal : NUM        # intLiteral
-  | CHAR             # charLiteral
-  | BOOL             # boolLiteral
+literal : NUM     # intLiteral        
+  | CHAR          # charLiteral   
+  | BOOL          # boolLiteral
   ;

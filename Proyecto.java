@@ -29,7 +29,7 @@ public class Proyecto {
     JFrame frame = new JFrame("Demo");  
     JTree jtree = new JTree(node);
     frame.add(jtree);
-    frame.setSize(550,400);
+    frame.setSize(550,800);
     frame.setBounds(10,520, 500,300);  
     frame.setVisible(true);
   }
