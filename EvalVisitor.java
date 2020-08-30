@@ -8,10 +8,10 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
 	@Override public DefaultMutableTreeNode visitProgram(ProyectoParser.ProgramContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("Program");
-    //inicializar myTable
     ctx.declaration().forEach(child -> {
       node.add(visit(child));
     });
+    myTable.show();
     return node; 
   }
 
@@ -19,9 +19,10 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("Declaration");
     if (ctx.structDeclaration() != null) {
       node.add(visit(ctx.structDeclaration()));
+
     } else if (ctx.varDeclaration() != null) {
-      System.out.println(ctx.toString());
       node.add(visit(ctx.varDeclaration()));
+
     } else if (ctx.methodDeclaration() != null) {
       node.add(visit(ctx.methodDeclaration()));
     };
@@ -29,55 +30,104 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
   }
 
   @Override public DefaultMutableTreeNode visitCommonVarDeclaration(ProyectoParser.CommonVarDeclarationContext ctx) {
-    if (ctx.varType().type != null) {
-      //revsar que no sea void 
-      System.out.println(ctx.varType().type.getText());
-      System.out.println(ctx.ID().getText());
-      myTable.putVariable(ctx.varType().type.getText(), ctx.ID().getText());
-    } else { //handle structs
-
-    }
-    
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("commonVarDeclaration");
     node.add(visit(ctx.varType()));
     DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
     node.add(IDNode);
-    
+
+    if (ctx.varType().type != null) {
+      myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
+    } else { //maneja structs
+      if(ctx.varType().ID() != null) {
+        myTable.putCommonVariable(ctx.varType().ID(), "struct", ctx.ID().getText());
+      } else {
+        myTable.putCommonVariable(ctx.varType().structDeclaration().ID(), "struct", ctx.ID().getText());
+      }
+    }  
     return node; 
   }
 
   @Override public DefaultMutableTreeNode visitArrayVarDeclaration(ProyectoParser.ArrayVarDeclarationContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("arrayVarDeclaration");
-    visitChildren(ctx);
-    try {
-      //myTable.put(tipo = ctx.varType().text? ,id = ctx.ID().getText(), cantidad);
-    }
-    catch(Exception e) {
-      //  Block of code to handle errors
+    node.add(visit(ctx.varType()));
+    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    node.add(IDNode);
+    DefaultMutableTreeNode NUMNode = new DefaultMutableTreeNode(ctx.NUM().getText());
+    node.add(NUMNode);
+
+    if (ctx.varType().type != null) {
+      //revisar que NUM sea int
+      myTable.putArrayVariable(ctx.varType().type.getText(), ctx.ID().getText(), Integer.parseInt(ctx.NUM().getText()));
+    } else {
+      if(ctx.varType().ID() != null) {
+        myTable.putArrayVariable(ctx.varType().ID().getText() ,"struct", ctx.ID().getText(), Integer.parseInt(ctx.NUM().getText()));
+      } else {
+        myTable.putArrayVariable(ctx.varType().structDeclaration().ID().getText() ,"struct", ctx.ID().getText(), Integer.parseInt(ctx.NUM().getText()));
+      }
     }
     return node; 
   }
 
   @Override public DefaultMutableTreeNode visitStructDeclaration(ProyectoParser.StructDeclarationContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("structDeclaration");
-    visitChildren(ctx);
-    
+    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    node.add(IDNode);
+    HashMap<String, String> variables = new HashMap<String, String>();
+    ctx.varDeclaration().forEach(child -> {
+
+      //variables comunes
+      if (child.getClass() == ProyectoParser.CommonVarDeclarationContext.class) {
+        ProyectoParser.CommonVarDeclarationContext childVariable = (ProyectoParser.CommonVarDeclarationContext) child;
+        // tipos normales
+        if (childVariable.varType().type != null) {
+          variables.put(childVariable.varType().type.getText(), childVariable.ID().getText());
+        } else { //Structs dentro de structs
+          if(childVariable.varType().ID() != null) {
+            variables.put(childVariable.varType().ID().getText(), childVariable.ID().getText());
+          } else {
+            variables.put(childVariable.varType().structDeclaration().ID().getText(), childVariable.ID().getText());
+          }
+        }
+
+      } else {
+        ProyectoParser.ArrayVarDeclarationContext childArrayVariable = (ProyectoParser.ArrayVarDeclarationContext) child;
+        
+      }
+      node.add(visit(child));
+    });
+
+    myTable.putStructVariable(ctx.ID(), variables);
     return node; 
   }
 
   @Override public DefaultMutableTreeNode visitVarType(ProyectoParser.VarTypeContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("varType");
+    // falta el caso para evaluar structs
     visitChildren(ctx);
     return node; 
   }
 
   @Override public DefaultMutableTreeNode visitMethodDeclaration(ProyectoParser.MethodDeclarationContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("methodDeclaration");
+
+    HashMap<String, String> parameters = new HashMap<String, String>();
     node.add(visit(ctx.methodType()));
     ctx.parameter().forEach(child -> {
+      if (child.getClass() == ProyectoParser.CommonParameterContext.class) {
+        ProyectoParser.CommonParameterContext childParameter = (ProyectoParser.CommonParameterContext) child;
+        parameters.put(childParameter.ID().getText(), childParameter.parameterType().type.getText());
+      } else {
+        ProyectoParser.ArrayParameterContext childArrayParameter = (ProyectoParser.ArrayParameterContext) child;
+        parameters.put(childArrayParameter.ID().getText(), childArrayParameter.parameterType().type.getText()+'*');
+      }
       node.add(visit(child));
     });
+    myTable.putVariable(ctx.methodType().type.getText(), ctx.ID().getText(), parameters);
+
+    myTable.createEnviroment(ctx.ID().getText());
     node.add(visit(ctx.block()));
+    myTable.returnEnviroment();
+
     return node; 
   }
 

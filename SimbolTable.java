@@ -5,85 +5,196 @@ import java.util.HashMap; // import the HashMap class
 final class Data {
   private String id;
   private String tipo;
+  private String dependencia;
+  private Integer cantidad;
+  private HashMap<String, Tuple2<String, Integer>> parametros;
+  private HashMap<String, Tuple2<String, Integer>> variables;
 
-  private String direccion;
-  private String tamaño;
-
-  private String parametros;
-  private String ambito;
-  private String numeroLinea;
-  private String cantidad;
-
-  public static void main() {
-
+  //CommonVariable
+  public Data(String id, String type) {
+    this.id = id;
+    this.tipo = type;
   }
+
+  //commonVariable (struct)
+  public Data(String dependecy, String id, String type) {
+    this.dependencia = dependecy;
+    this.id = id;
+    this.tipo = type;
+  }
+
+  //ArrayVariable
+  public Data(String id, String type, Integer size) {
+    this.id = id;
+    this.tipo = type;
+    this.cantidad = size;
+  }
+
+  //ArrayVariable (struct)
+  public Data(String dependecy, String id, String type, Integer size) {
+    this.dependencia = dependecy;
+    this.id = id;
+    this.tipo = type;
+    this.cantidad = size;
+  }
+
+  //MethodVariable
+  public Data(String id, String type, HashMap<String, String> parameters) {
+    this.id = id;
+    this.tipo = type;
+    this.parametros = parameters;
+  }
+
+  //StructVariable
+  public Data(String id, HashMap<String, String> variables) {
+    this.id = id;
+    this.tipo = "struct";
+    this.variables = variables;
+  }
+
+  public String toString() {
+    String cadena = String.format("<%s, %s>", id, tipo);
+    return cadena;
+  }
+
+
 }
 
 
 final class Enviroment {
-  private String id;
+  public String id;
   private Enviroment father;
   private HashMap<String, Data> localdata = new HashMap<String, Data>();
 
-  public void main() {
+  public Enviroment(){
     this.id = "global";
   }
 
-  public void main(String id, Enviroment father) {
+  public Enviroment(String id, Enviroment father) {
     this.id = id;
     this.father = father;
   }
 
-  public static void put(String type, String id){
-
+  public void putCommonVariable(String type, String id) {
+    Data data = new Data(id, type);
+    localdata.put(id, data);
   }
+
+  public void putCommonVariable(String dependecy, String type, String id) {
+    // revisar que dependency ya haya sido creado aqui o en father
+    Data data = new Data(dependecy, id, type);
+    localdata.put(id, data);
+  }
+
+  public void putArrayVariable(String type, String id, Integer size) {
+    Data data = new Data(id, type, size);
+    localdata.put(id, data);
+  }
+
+  public void putArrayVariable(String dependecy, String type, String id, Integer size) {
+    //revisar que dependecy ya haya sido creado
+    Data data = new Data(dependecy, id, type, size);
+    localdata.put(id, data);
+  }
+
+  public void putMethodVariable(String type, String id, HashMap<String, String> parameters) {
+    Data data = new Data(id, type, parameters);
+    localdata.put(id, data);
+  }
+
+  public void putStructVariable(String id, HashMap<String, String> variables){
+    Data data = new Data(id, variables);
+    localdata.put(id, data);
+  }
+
+  public void get(String id) {
+    // si esta localData en local data, regresar
+    // si no esta tratar de regresar el de los padres
+    // si es global y no esta entonces regresar error
+  }
+
+  public String toString(){
+    String cadena;
+    if (id == "global") {
+      cadena = String.format("(<%s> %s)", "none", localdata.toString());
+    } else {
+      cadena = String.format("(<%s> %s)", father.id, localdata.toString());
+    }
+    return cadena;
+  }
+ 
 }
 
 public class SimbolTable {
   private Stack<String> enviromentStack = new Stack<String>(); 
   private HashMap<String, Enviroment> enviroments = new HashMap<String, Enviroment>();
 
-  public void main() {
+  public SimbolTable() {
     Enviroment globalEnviroment = new Enviroment();
     enviroments.put("global", globalEnviroment);
     enviromentStack.push("global");
   }
 
-  public void createEnviroment(String id){
-    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    new Enviroment(id, currentEnviroment)
-    Enviroment newEnviroment = new Enviroment(id, currentEnviroment);
+  public void show(){
+    System.out.println(enviroments.toString());
+  }
+
+  public void createEnviroment(String id) {
+    Enviroment fatherEnviroment = enviroments.get(enviromentStack.peek());
+    Enviroment newEnviroment = new Enviroment(id, fatherEnviroment);
+    enviroments.put(id, newEnviroment);
     enviromentStack.push(id);
   }
 
   public String returnEnviroment(){
     // revisar que no haga pop de global
-    String enviroment = enviromentStack.pop();
+    String enviroment = enviromentStack.peek();
+    if (enviroment != "global") {
+      enviromentStack.pop();
+    } else {
+      // alegar que no se pase de global
+    }
     return enviroment;
   }
 
   // commonVariable
-  public void putVariable(String type, String id){
+  public void putCommonVariable(String type, String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.put(type, id);
+    currentEnviroment.putCommonVariable(type, id);
+  }
+
+  // commonVariable (struct)
+  public void putCommonVariable(String dependecy, String type, String id){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    currentEnviroment.putCommonVariable(dependecy, type, id);
   }
 
   // arrayVariable
-  public void putVariable(String type, String id, int size){
-    
+  public void putArrayVariable(String type, String id, int size){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    currentEnviroment.putArrayVariable(type, id, size);
   }
 
-  // method
-  public void putVariable(String type, String id, String[] parameters){
-    
+  // arrayVariable (struct)
+  public void putArrayVariable(String dependecy, String type, String id, int size){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    currentEnviroment.putArrayVariable(dependecy, type, id, size);
   }
 
-  // Struct
-  public void putVariable(String id, String[] declarations1){
-    
+  public void putMethodVariable(String type, String id, HashMap<String, String> parameters){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    currentEnviroment.putMethodVariable(type, id, parameters);
+
   }
 
+  public void putStructVariable(String id, HashMap<String, String> variables){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    currentEnviroment.putStructVariable(id, variables);
+  }
+
+  /*
   //class
+  */
 
   public void getVariable(){
     

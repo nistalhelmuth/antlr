@@ -6,8 +6,8 @@ import ProyectoTokens;
 
 program : 'class' 'Program' '{' (declaration)* '}';
 
-declaration : structDeclaration      
-  | varDeclaration                   
+declaration : varDeclaration   
+  | structDeclaration                  
   | methodDeclaration                
   ;
 
