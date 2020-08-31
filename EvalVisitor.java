@@ -1,10 +1,12 @@
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.tree.DefaultMutableTreeNode;
+
+import java.beans.Expression;
 import java.util.*;
 
 public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
-  SimbolTable myTable = new SimbolTable();
+  public SimbolTable myTable = new SimbolTable();
 
 	@Override public DefaultMutableTreeNode visitProgram(ProyectoParser.ProgramContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("Program");
@@ -39,9 +41,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
     } else { //maneja structs
       if(ctx.varType().ID() != null) {
-        myTable.putCommonVariable(ctx.varType().ID(), "struct", ctx.ID().getText());
+        myTable.putCommonVariable(ctx.varType().ID().getText(), "struct", ctx.ID().getText());
       } else {
-        myTable.putCommonVariable(ctx.varType().structDeclaration().ID(), "struct", ctx.ID().getText());
+        myTable.putCommonVariable(ctx.varType().structDeclaration().ID().getText(), "struct", ctx.ID().getText());
       }
     }  
     return node; 
@@ -54,17 +56,23 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     node.add(IDNode);
     DefaultMutableTreeNode NUMNode = new DefaultMutableTreeNode(ctx.NUM().getText());
     node.add(NUMNode);
-
-    if (ctx.varType().type != null) {
-      //revisar que NUM sea int
-      myTable.putArrayVariable(ctx.varType().type.getText(), ctx.ID().getText(), Integer.parseInt(ctx.NUM().getText()));
+    Integer numValue = Integer.parseInt(ctx.NUM().getText());
+    if (numValue <= 0) {
+      System.out.println(String.format("Unavalible size for string %s", ctx.ID().getText()));
     } else {
-      if(ctx.varType().ID() != null) {
-        myTable.putArrayVariable(ctx.varType().ID().getText() ,"struct", ctx.ID().getText(), Integer.parseInt(ctx.NUM().getText()));
+      if (ctx.varType().type != null) {
+        //revisar que NUM sea int
+        myTable.putArrayVariable(ctx.varType().type.getText(), ctx.ID().getText(), numValue);
       } else {
-        myTable.putArrayVariable(ctx.varType().structDeclaration().ID().getText() ,"struct", ctx.ID().getText(), Integer.parseInt(ctx.NUM().getText()));
+        if(ctx.varType().ID() != null) {
+          myTable.putArrayVariable(ctx.varType().ID().getText() ,"struct", ctx.ID().getText(), numValue);
+        } else {
+          myTable.putArrayVariable(ctx.varType().structDeclaration().ID().getText() ,"struct", ctx.ID().getText(), numValue);
+        }
       }
     }
+
+    
     return node; 
   }
 
@@ -72,31 +80,42 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("structDeclaration");
     DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
     node.add(IDNode);
-    HashMap<String, String> variables = new HashMap<String, String>();
+    HashMap<String, Pair<String, Integer>> variables = new HashMap<String, Pair<String, Integer>>();
     ctx.varDeclaration().forEach(child -> {
+      node.add(visit(child));
 
       //variables comunes
       if (child.getClass() == ProyectoParser.CommonVarDeclarationContext.class) {
         ProyectoParser.CommonVarDeclarationContext childVariable = (ProyectoParser.CommonVarDeclarationContext) child;
-        // tipos normales
+        Pair pair = new Pair(childVariable.ID().getText());
+         // tipos normales
         if (childVariable.varType().type != null) {
-          variables.put(childVariable.varType().type.getText(), childVariable.ID().getText());
+          variables.put(childVariable.varType().type.getText(), pair);
         } else { //Structs dentro de structs
           if(childVariable.varType().ID() != null) {
-            variables.put(childVariable.varType().ID().getText(), childVariable.ID().getText());
+            variables.put(childVariable.varType().ID().getText(), pair);
           } else {
-            variables.put(childVariable.varType().structDeclaration().ID().getText(), childVariable.ID().getText());
+            variables.put(childVariable.varType().structDeclaration().ID().getText(), pair);
           }
         }
 
-      } else {
+      } else { //varialbes array
         ProyectoParser.ArrayVarDeclarationContext childArrayVariable = (ProyectoParser.ArrayVarDeclarationContext) child;
-        
+        Pair pair = new Pair(childArrayVariable.ID().getText(), Integer.parseInt(childArrayVariable.NUM().getText()));
+        // tipos normales
+        if (childArrayVariable.varType().type != null) {
+          variables.put(childArrayVariable.varType().type.getText(), pair);
+        } else { //Structs dentro de structs
+          if(childArrayVariable.varType().ID() != null) {
+            variables.put(childArrayVariable.varType().ID().getText(), pair);
+          } else {
+            variables.put(childArrayVariable.varType().structDeclaration().ID().getText(), pair);
+          }
+        }
       }
-      node.add(visit(child));
     });
 
-    myTable.putStructVariable(ctx.ID(), variables);
+    myTable.putStructVariable(ctx.ID().getText(), variables);
     return node; 
   }
 
@@ -110,20 +129,23 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
   @Override public DefaultMutableTreeNode visitMethodDeclaration(ProyectoParser.MethodDeclarationContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("methodDeclaration");
 
-    HashMap<String, String> parameters = new HashMap<String, String>();
+    HashMap<String, Pair<String, Integer>> parameters = new HashMap<String, Pair<String, Integer>>();
     node.add(visit(ctx.methodType()));
     ctx.parameter().forEach(child -> {
       if (child.getClass() == ProyectoParser.CommonParameterContext.class) {
         ProyectoParser.CommonParameterContext childParameter = (ProyectoParser.CommonParameterContext) child;
-        parameters.put(childParameter.ID().getText(), childParameter.parameterType().type.getText());
+        Pair pair = new Pair(childParameter.parameterType().type.getText());
+        parameters.put(childParameter.ID().getText(), pair);
       } else {
         ProyectoParser.ArrayParameterContext childArrayParameter = (ProyectoParser.ArrayParameterContext) child;
-        parameters.put(childArrayParameter.ID().getText(), childArrayParameter.parameterType().type.getText()+'*');
+        Pair pair = new Pair(childArrayParameter.parameterType().type.getText(), 0);
+        parameters.put(childArrayParameter.ID().getText(), pair);
       }
       node.add(visit(child));
     });
-    myTable.putVariable(ctx.methodType().type.getText(), ctx.ID().getText(), parameters);
+    myTable.putMethodVariable(ctx.methodType().type.getText(), ctx.ID().getText(), parameters);
 
+    // revisar que el return value concuerde con el methodType
     myTable.createEnviroment(ctx.ID().getText());
     node.add(visit(ctx.block()));
     myTable.returnEnviroment();
@@ -169,6 +191,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
   @Override public DefaultMutableTreeNode visitIfStatement(ProyectoParser.IfStatementContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("IfStatement");
+    // revisar que expresion sea de tipo boolean
     node.add(visit(ctx.expression()));
     node.add(visit(ctx.block(0)));
     if (ctx.block(1) != null) {
@@ -179,6 +202,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
   @Override public DefaultMutableTreeNode visitWhileStatement(ProyectoParser.WhileStatementContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("WhileStatement");
+    // revisar que expresion sea de tipo boolean
     node.add(visit(ctx.expression()));
     return node;
   }
@@ -205,6 +229,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
   @Override public DefaultMutableTreeNode visitLocationStatement(ProyectoParser.LocationStatementContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("LocationStatement");
+    //revisar que tanto location como expression sean del mismo tipo
     node.add(visit(ctx.location()));
     node.add(visit(ctx.expression()));
     return node;
@@ -221,11 +246,16 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
     node.add(IDNode);
     if(ctx.expression() != null) {
+      // revisar que expression sea de tipo int
       node.add(visit(ctx.expression()));
     }
     if(ctx.location() != null) {
       node.add(visit(ctx.location()));
     }
+    Data data = myTable.getVariable(ctx.ID().getText());
+    if (data == null) {
+      System.out.println(String.format("location <%s> hasn't been declarated", ctx.ID().getText()));
+    } 
     return node;
   }
 
@@ -262,11 +292,17 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
   @Override public DefaultMutableTreeNode visitExpressionMethodCall(ProyectoParser.ExpressionMethodCallContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionMethodCall");
     node.add(visit(ctx.methodCall()));
+    Data method = myTable.getVariable(ctx.methodCall().ID().getText());
+    if (method == null) {
+      System.out.println(String.format("method <%s> hasn't been declarated", ctx.methodCall().ID().getText()));
+    } 
+    // revisar que los parametros esten bien
     return node;
   }
 
   @Override public DefaultMutableTreeNode visitExpressionCommon(ProyectoParser.ExpressionCommonContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionCommon");
+    // revisar que las expressiones concuerden con el tipo de operador
     node.add(visit(ctx.expression(0)));
     node.add(visit(ctx.op()));
     node.add(visit(ctx.expression(1)));
