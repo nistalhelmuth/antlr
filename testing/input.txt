@@ -1,0 +1,35 @@
+class Program {
+    char d[5];
+    int a[5];
+    int b;
+    char c;
+
+    struct u {
+        char i;
+    };
+
+    struct m {
+        int a;
+        int b;
+        struct u k;
+    }
+
+    struct m st;
+    struct m y;
+
+    int method1(int x, char g) {
+        int h;
+        int j;
+        return j;
+    }
+
+    int main() {
+        int var;
+        boolean t;
+        var = c * var + b;
+        if (0 < 1) {
+        }
+    }
+
+}
+

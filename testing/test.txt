@@ -1,15 +1,11 @@
 class Program {
-  int x; 
 
   int add(int x, int y){
-    return x + y;           // add the two parameters
+    return 1;
   }
-  
-  int main(){
-    struct x a;
-    int a;
-    a = 3;
-    return add(a, 2);
+
+  void Main(){
+    1 + add(1,2);
   }
 
 }

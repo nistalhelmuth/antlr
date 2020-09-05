@@ -1,0 +1,9 @@
+class Program {
+  int method1(int x, char g) {
+  }
+
+  int Main() {
+    method(1, 1);
+  }
+}
+

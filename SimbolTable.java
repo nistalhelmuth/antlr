@@ -1,10 +1,10 @@
-import java.util.Stack; 
-import java.util.HashMap;
+import java.util.Stack;
+import java.util.LinkedHashMap;
 
 final class Enviroment {
   public String id;
   private Enviroment father;
-  private HashMap<String, Data> localdata = new HashMap<String, Data>();
+  private LinkedHashMap<String, Data> localdata = new LinkedHashMap<String, Data>();
 
   public Enviroment(){
     this.id = "global";
@@ -53,7 +53,7 @@ final class Enviroment {
     }
   }
 
-  public void putMethodVariable(String type, String id, HashMap<String, Pair<String, Integer>> parameters) {
+  public void putMethodVariable(String type, String id, LinkedHashMap<String, Pair<String, Integer>> parameters) {
     Data data = new Data(id, type, parameters);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
@@ -62,7 +62,7 @@ final class Enviroment {
     }
   }
 
-  public void putStructVariable(String id, HashMap<String, Pair<String, Integer>> variables){
+  public void putStructVariable(String id, LinkedHashMap<String, Pair<String, Integer>> variables){
     Data data = new Data(id, variables);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
@@ -72,13 +72,12 @@ final class Enviroment {
   }
 
   public Data getVariable(String id) {
-    if (! localdata.containsKey(id)) {
+    if (localdata.containsKey(id)) {
       return localdata.get(id);
-    } else if (id != "global"){
+    } else if (father != null){
       return father.getVariable(id);
-    } else {
-      return null;
     }
+    return null;
   }
 
   public String toString(){
@@ -95,12 +94,21 @@ final class Enviroment {
 
 public class SimbolTable {
   private Stack<String> enviromentStack = new Stack<String>(); 
-  private HashMap<String, Enviroment> enviroments = new HashMap<String, Enviroment>();
+  private LinkedHashMap<String, Enviroment> enviroments = new LinkedHashMap<String, Enviroment>();
 
   public SimbolTable() {
     Enviroment globalEnviroment = new Enviroment();
     enviroments.put("global", globalEnviroment);
     enviromentStack.push("global");
+  }
+
+  public Data isMainCreated(){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    Data main = currentEnviroment.getVariable("Main");
+    if (currentEnviroment.id == "global" &&  main != null) {
+      return main;
+    } 
+    return null;
   }
 
   public void show(){
@@ -149,13 +157,13 @@ public class SimbolTable {
     currentEnviroment.putArrayVariable(dependecy, type, id, size);
   }
 
-  public void putMethodVariable(String type, String id, HashMap<String, Pair<String, Integer>> parameters){
+  public void putMethodVariable(String type, String id, LinkedHashMap<String, Pair<String, Integer>> parameters){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
     currentEnviroment.putMethodVariable(type, id, parameters);
 
   }
 
-  public void putStructVariable(String id, HashMap<String, Pair<String,Integer>> variables){
+  public void putStructVariable(String id, LinkedHashMap<String, Pair<String,Integer>> variables){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
     currentEnviroment.putStructVariable(id, variables);
   }

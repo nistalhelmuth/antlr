@@ -1,11 +1,10 @@
 class Program {
-  int x; 
+  int a[5];
+  int b;
   
-  int main(){
-    struct x a;
+  int Main(int x, int y){
     int a;
-    a = 3;
-    return add(a, 2);
+    int b;
   }
   
 }
