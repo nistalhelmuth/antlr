@@ -1,10 +1,10 @@
 class Program {
-  int a[5];
-  int b;
   
-  int Main(int x, int y){
-    int a;
-    int b;
+  void Main(int x, int y){
+    if(true){
+      int a;
+    }
+    
   }
   
 }

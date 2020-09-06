@@ -1,7 +1,8 @@
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 import java.io.IOException;
-
+import java.io.File;
+import java.io.PrintStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
 
@@ -22,6 +23,11 @@ public class Proyecto {
     ProyectoParser parser = new ProyectoParser(tokens);
     ParseTree tree = parser.program(); 
     // System.out.println(tree.toStringTree(parser));
+
+    File file = new File("logs.txt");
+    PrintStream stream = new PrintStream(file);
+    System.out.println("From now on "+file.getAbsolutePath()+" will have semantic errors");
+    System.setOut(stream);
 
     EvalVisitor eval = new EvalVisitor();
     DefaultMutableTreeNode node = eval.visit(tree);

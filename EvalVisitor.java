@@ -40,21 +40,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       if (type1.equals(type2)) {
         return type1;
       }
-      System.out.println("The expressions types are unequal");
+      System.out.println(String.format("%s: The expressions types are unequal", ctx.start.getLine()));
     } else if (ctx.getClass() == ProyectoParser.ExpressionNegativeContext.class) {
       ProyectoParser.ExpressionNegativeContext test = (ProyectoParser.ExpressionNegativeContext) ctx;
       Pair type = getExpressionType(test.expression());
       if (type.equals(new Pair<String, Integer>("int"))){
         return type;
       }
-      System.out.println("The expressions isnt integer");
+      System.out.println(String.format("%s: The expressions isnt integer", ctx.start.getLine()));
     } else if (ctx.getClass() == ProyectoParser.ExpressionNotContext.class) {
       ProyectoParser.ExpressionNegativeContext test = (ProyectoParser.ExpressionNegativeContext) ctx;
       Pair type = getExpressionType(test.expression());
       if (type.equals(new Pair<String, Integer>("bool"))){
         return type;
       }
-      System.out.println("The expressions isnt boolean");
+      System.out.println(String.format("%s: The expressions isnt boolean", ctx.start.getLine()));
     } else if (ctx.getClass() == ProyectoParser.ExpressionGroupContext.class) {
       ProyectoParser.ExpressionGroupContext test = (ProyectoParser.ExpressionGroupContext) ctx;
       return getExpressionType(test.expression());
@@ -70,10 +70,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
     Data main = myTable.isMainCreated();
     if (main == null || main.parametros == null){
-      System.out.println("Main is invalid or doesnt exits");
-      System.out.println(main.toString());
+      System.out.println(String.format("%s: Main is invalid or doesnt exits" ,ctx.start.getLine()));
     }
-    myTable.show();
+    //myTable.show();
 
     return node; 
   }
@@ -115,11 +114,18 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     node.add(visit(ctx.varType()));
     DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
     node.add(IDNode);
-    DefaultMutableTreeNode NUMNode = new DefaultMutableTreeNode(ctx.NUM().getText());
-    node.add(NUMNode);
-    Integer numValue = Integer.parseInt(ctx.NUM().getText());
-    if (numValue <= 0) {
-      System.out.println(String.format("Unavalible size for string %s", ctx.ID().getText()));
+    Integer numValue;
+    try {
+      DefaultMutableTreeNode NUMNode = new DefaultMutableTreeNode(ctx.NUM().getText());
+      node.add(NUMNode);
+      numValue = Integer.parseInt(ctx.NUM().getText());
+   } catch(Exception ex) {
+      System.out.println(String.format("%s: Unavalible input for array dimention on <%s>", ctx.start.getLine(), ctx.ID().getText()));
+      numValue = 0;
+   }
+
+    if (numValue < 0) {
+      System.out.println(String.format("%s: Unavalible size for string %s", ctx.start.getLine(), ctx.ID().getText()));
     } else {
       if (ctx.varType().type != null) {
         //revisar que NUM sea int
@@ -230,7 +236,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       }
     }
     if(flag){
-      System.out.println(String.format("Check return type on <%s>",ctx.ID().getText()));
+      System.out.println(String.format("%s: Check return type on <%s>", ctx.start.getLine(), ctx.ID().getText()));
     }
     node.add(visit(ctx.block()));
     myTable.returnEnviroment();
@@ -276,12 +282,11 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
   @Override public DefaultMutableTreeNode visitIfStatement(ProyectoParser.IfStatementContext ctx) { 
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("IfStatement");
-    // revisar que expresion sea de tipo boolean
-
-    
-    
-
     node.add(visit(ctx.expression()));
+
+    if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
+      System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
+    }
 
 
     node.add(visit(ctx.block(0)));
@@ -293,7 +298,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
   @Override public DefaultMutableTreeNode visitWhileStatement(ProyectoParser.WhileStatementContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("WhileStatement");
-    // revisar que expresion sea de tipo boolean
+    if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
+      System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
+    }
     node.add(visit(ctx.expression()));
     return node;
   }
@@ -321,9 +328,16 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
   @Override public DefaultMutableTreeNode visitLocationStatement(ProyectoParser.LocationStatementContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("LocationStatement");
-    //revisar que tanto location como expression sean del mismo tipo
     node.add(visit(ctx.location()));
     node.add(visit(ctx.expression()));
+
+    
+    Pair<String, Integer> tipoLocation = getLocationType(ctx.location());
+    Pair<String, Integer> tipoExpression = getExpressionType(ctx.expression());
+    if(tipoLocation.equals(tipoExpression)){
+      System.out.println(String.format("%s: Check types of location and expression", ctx.start.getLine()));
+    }
+    
     return node;
   }
 
@@ -343,7 +357,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       if (getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("Integer"))) {
         node.add(visit(ctx.expression()));
       } else {
-        System.out.println("NUM isnt integer");
+        System.out.println(String.format("%s: NUM isnt integer", ctx.start.getLine()));
       }
     }
     if(ctx.location() != null) {
@@ -351,7 +365,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     }
     Data data = myTable.getVariable(ctx.ID().getText());
     if (data == null) {
-      System.out.println(String.format("location <%s> hasn't been declarated", ctx.ID().getText()));
+      System.out.println(String.format("%s: location <%s> hasn't been declarated", ctx.start.getLine(), ctx.ID().getText()));
     } 
     return node;
   }
@@ -365,12 +379,18 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
   @Override public DefaultMutableTreeNode visitExpressionNegative(ProyectoParser.ExpressionNegativeContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionNegative");
     node.add(visit(ctx.expression()));
+    if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("int"))) {
+      System.out.println("Check type of expression must be integer");
+    }
     return node;
   }
 
   @Override public DefaultMutableTreeNode visitExpressionNot(ProyectoParser.ExpressionNotContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionNot");
     node.add(visit(ctx.expression()));
+    if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))) {
+      System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
+    }
     return node;
   }
 
@@ -392,7 +412,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
     Data method = myTable.getVariable(ctx.methodCall().ID().getText()); 
     if(method.tipo.equals(new Pair<String, Integer>("void"))){
-      System.out.println(String.format("Expected return value on <%s>", method.id));
+      System.out.println(String.format("%s: Expected return value on <%s>", ctx.start.getLine(), method.id));
     }
 
     return node;
@@ -401,6 +421,30 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
   @Override public DefaultMutableTreeNode visitExpressionCommon(ProyectoParser.ExpressionCommonContext ctx) {
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionCommon");
     // revisar que las expressiones concuerden con el tipo de operador
+
+    Pair<String, Integer> tipo0 = getExpressionType(ctx.expression(0));
+    Pair<String, Integer> tipo1 = getExpressionType(ctx.expression(1));
+    if(ctx.op().arithOp() != null) {
+      if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
+        System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
+      }
+    } else if(ctx.op().relOp() != null) {
+      if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
+        System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
+      }
+    } else if(ctx.op().eqOp() != null) {
+      //validado que sean cualquier tipo e iguales
+      if(!tipo0.equals(tipo1)) {
+        System.out.println(String.format("Check types of %s: expression must be equal", ctx.start.getLine()));
+      }
+    } else if(ctx.op().condOp() != null) {
+      if(!tipo0.equals(new Pair<String, Integer>("boolean")) || !tipo0.equals(tipo1)) {
+        System.out.println(String.format("Check types of %s: expression must be boolean", ctx.start.getLine()));
+      }
+    } else {
+      System.out.println(String.format("%s: unavalible op on expression", ctx.start.getLine()));
+    }
+
     node.add(visit(ctx.expression(0)));
     node.add(visit(ctx.op()));
     node.add(visit(ctx.expression(1)));
@@ -414,7 +458,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
     Data methodDefinition = myTable.getVariable(ctx.ID().getText());
     if (methodDefinition == null) {
-      System.out.println(String.format("method <%s> hasn't been declarated", ctx.ID().getText()));
+      System.out.println(String.format("%s: method <%s> hasn't been declarated", ctx.start.getLine(), ctx.ID().getText()));
     }
     if (ctx.expression() != null) {
       Integer i = 0;
@@ -425,13 +469,14 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
         if (i < methodDefinition.parametros.values().toArray().length){
           Pair<String, Integer> param = (Pair<String,Integer>) methodDefinition.parametros.values().toArray()[i];
           if(param != null && !param.equals(expressionType)){
-            System.out.println(String.format("check param <%s> on method <%s>", 
+            System.out.println(String.format("%s: check param <%s> on method <%s>", 
+              ctx.start.getLine(),
               expressionType, 
               methodDefinition.id
             ));
           }
         } else {
-          System.out.println(String.format("more params than needed on method <%s>", methodDefinition.id)); 
+          System.out.println(String.format("%s: more params than needed on method <%s>", ctx.start.getLine(), methodDefinition.id)); 
         }
         
         i = i+1;

@@ -1,11 +1,8 @@
 class Program {
-
-  int add(int x, int y){
-    return 1;
-  }
+  int a[2];
 
   void Main(){
-    1 + add(1,2);
+    
   }
 
 }
