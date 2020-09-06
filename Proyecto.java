@@ -32,13 +32,11 @@ public class Proyecto {
     EvalVisitor eval = new EvalVisitor();
     DefaultMutableTreeNode node = eval.visit(tree);
     
-    /**
-    JFrame frame = new JFrame("Demo");  
-    JTree jtree = new JTree(node);
-    frame.add(jtree);
-    frame.setSize(550,800);
-    frame.setBounds(10,520, 500,300);  
-    frame.setVisible(true);
-     */
+    //JFrame frame = new JFrame("Demo");  
+    //JTree jtree = new JTree(node);
+    //frame.add(jtree);
+    //frame.setSize(550,800);
+    //frame.setBounds(10,520, 500,300);  
+    //frame.setVisible(true);
   }
 }

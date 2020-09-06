@@ -45,26 +45,25 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       Pair<String, Integer> tipo0 = getExpressionType(test.expression(0));
       Pair<String, Integer> tipo1 = getExpressionType(test.expression(1));
       if(test.op().arithOp() != null) {
-        if(tipo0.equals(new Pair<String, Integer>("int")) && tipo0.equals(tipo1)) {
+        if(tipo0.getFirst().equals(new Pair<String, Integer>("int").getFirst()) && tipo0.getFirst().equals(tipo1.getFirst())) {
           return new Pair<String, Integer>("int");
         } else {
           System.out.println(String.format("Check types of %s: expression must be integer", test.start.getLine()));
         }
       } else if(test.op().relOp() != null) {
-        
-        if(tipo0.equals(new Pair<String, Integer>("int")) && tipo0.equals(tipo1)) {
+        if(tipo0.getFirst().equals(new Pair<String, Integer>("int").getFirst()) && tipo0.getFirst().equals(tipo1.getFirst())) {
           return new Pair<String, Integer>("boolean");
         } else {
           System.out.println(String.format("Check types of %s: expression must be integer", test.start.getLine()));
         }
       } else if(test.op().eqOp() != null) {
-        if(tipo0.equals(tipo1)) {
+        if(tipo0.getFirst().equals(tipo1.getFirst())) {
           return new Pair<String, Integer>("boolean");
         } else {
           System.out.println(String.format("Check types of %s: expression must be equal", test.start.getLine()));
         }
       } else if(test.op().condOp() != null) {
-        if(tipo0.equals(new Pair<String, Integer>("boolean")) && tipo0.equals(tipo1)) {
+        if(tipo0.getFirst().equals(new Pair<String, Integer>("boolean").getFirst()) && tipo0.getFirst().equals(tipo1.getFirst())) {
           return new Pair<String, Integer>("boolean");
         } else {
           System.out.println(String.format("Check types of %s: expression must be boolean", test.start.getLine()));
@@ -88,7 +87,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       ProyectoParser.ExpressionGroupContext test = (ProyectoParser.ExpressionGroupContext) ctx;
       return getExpressionType(test.expression());
     }
-
     return null;
   }
 
@@ -233,7 +231,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
 
     LinkedHashMap<String, Pair<String, Integer>> parameters = new LinkedHashMap<String, Pair<String, Integer>>();
     node.add(visit(ctx.methodType()));
-
+    //System.out.println(ctx.ID().getText());
     ctx.parameter().forEach(child -> {
       if (child.getClass() == ProyectoParser.CommonParameterContext.class) {
         ProyectoParser.CommonParameterContext childParameter = (ProyectoParser.CommonParameterContext) child;
@@ -358,6 +356,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
       System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
     }
     node.add(visit(ctx.expression()));
+    node.add(visit(ctx.block()));
     return node;
   }
 
@@ -370,9 +369,15 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
   }
 
   @Override public DefaultMutableTreeNode visitMethodCallStatement(ProyectoParser.MethodCallStatementContext ctx) {
+    Data methodDefinition = myTable.getVariable(ctx.methodCall().ID().getText());
+    if (methodDefinition == null) {
+      System.out.println(String.format("%s: method <%s> hasn't been declarated", ctx.start.getLine(), ctx.methodCall().ID().getText()));
+    }
+    //System.out.println(methodDefinition);
+
+
     DefaultMutableTreeNode node = new DefaultMutableTreeNode("MethodCallStatement");
     node.add(visit(ctx.methodCall()));
-
     return node;
   }
 
@@ -390,6 +395,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     try {
       Pair<String, Integer> tipoLocation = getLocationType(ctx.location());
       Pair<String, Integer> tipoExpression = getExpressionType(ctx.expression());
+      //System.out.println(tipoExpression);
       if (tipoLocation == null) {
           System.out.println(String.format("%s: location doenst exists", ctx.start.getLine()));
       } else if (tipoExpression == null) {
@@ -420,7 +426,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
     node.add(IDNode);
     if (ctx.expression() != null) {
-      if (getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("Integer"))) {
+      if (getExpressionType(ctx.expression()).getFirst().equals(new Pair<String, Integer>("int").getFirst())) {
+      //if (getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("Integer"))) {
         node.add(visit(ctx.expression()));
       } else {
         System.out.println(String.format("%s: NUM isnt integer", ctx.start.getLine()));
@@ -479,7 +486,10 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     node.add(visit(ctx.methodCall()));
 
     Data method = myTable.getVariable(ctx.methodCall().ID().getText()); 
-    if(method.tipo.equals(new Pair<String, Integer>("void"))){
+    if (method == null){
+      System.out.println(String.format("%s: Expected method <%s> doenst exists", ctx.start.getLine(), ctx.methodCall().ID()));
+
+    } else if(method.tipo.equals(new Pair<String, Integer>("void"))){
       System.out.println(String.format("%s: Expected return value on <%s>", ctx.start.getLine(), method.id));
     }
 
@@ -493,6 +503,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     try {
       Pair<String, Integer> tipo0 = getExpressionType(ctx.expression(0));
       Pair<String, Integer> tipo1 = getExpressionType(ctx.expression(1));
+      
       if(ctx.op().arithOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
@@ -502,7 +513,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         }
       } else if(ctx.op().eqOp() != null) {
-        if(!tipo0.equals(tipo1)) {
+        if(!tipo0.getFirst().equals(tipo1.getFirst())) {
           System.out.println(String.format("Check types of %s: expression must be equal", ctx.start.getLine()));
         }
       } else if(ctx.op().condOp() != null) {
@@ -533,12 +544,14 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     if (methodDefinition == null) {
       System.out.println(String.format("%s: method <%s> hasn't been declarated", ctx.start.getLine(), ctx.ID().getText()));
     }
+
     if (ctx.expression() != null) {
       Integer i = 0;
       for ( ProyectoParser.ExpressionContext child : ctx.expression()){
         node.add(visit(child));
 
         Pair<String, Integer> expressionType = getExpressionType(child);
+
         if (i < methodDefinition.parametros.values().toArray().length){
           Pair<String, Integer> param = (Pair<String,Integer>) methodDefinition.parametros.values().toArray()[i];
           if(param != null && !param.equals(expressionType)){
@@ -551,7 +564,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
         } else {
           System.out.println(String.format("%s: more params than needed on method <%s>", ctx.start.getLine(), methodDefinition.id)); 
         }
-        
         i = i+1;
       }
       /** 

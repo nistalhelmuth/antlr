@@ -1,8 +1,32 @@
 class Program
 {
 
-  void main()
-  {
-    b.c.a = 'c';
-  }
+struct A
+{
+	int a;
+}; //este ';' no esta definido en las reglas originales
+
+
+struct B
+{
+	int b[5];
+	struct A c;
+};
+
+int factorial(int n)
+{
+  return 0;
+}
+
+void main()
+{
+  struct B y[5];
+  int j;
+  j=0;
+
+  y[j].c.a=factorial(y[j].b[0]);
+}
+
+
+
 }
