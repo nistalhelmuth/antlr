@@ -80,6 +80,30 @@ final class Enviroment {
     return null;
   }
 
+  public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx) {
+    //System.out.println(id);
+    if (localdata.containsKey(ctx.ID().getText())){
+      //System.out.println("contains");
+      
+      if (ctx.location().location() == null) {
+        //System.out.println(ctx.location().location() == null);
+        //System.out.println(localdata.get(ctx.ID().getText()).dependencia);
+        Data dependencia = getVariable(localdata.get(ctx.ID().getText()).dependencia);
+        //System.out.println(dependencia);
+        //System.out.println(dependencia.variables);
+        //System.out.println(ctx.location().ID().getText());
+        //System.out.println();
+        
+        return dependencia.variables.get(ctx.location().ID().getText());
+      } else {
+        return getStructVariable(ctx.location());
+      }
+    } else if(father != null){
+      return father.getStructVariable(ctx);
+    }
+    return null;
+  }
+
   public String toString(){
     String cadena;
     if (id == "global") {
@@ -104,7 +128,7 @@ public class SimbolTable {
 
   public Data isMainCreated(){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    Data main = currentEnviroment.getVariable("Main");
+    Data main = currentEnviroment.getVariable("main");
     if (currentEnviroment.id == "global" &&  main != null) {
       return main;
     } 
@@ -175,5 +199,10 @@ public class SimbolTable {
   public Data getVariable(String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
     return currentEnviroment.getVariable(id);
+  }
+
+  public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx){
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    return currentEnviroment.getStructVariable(ctx);
   }
 }

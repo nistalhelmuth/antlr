@@ -15,7 +15,7 @@ varDeclaration : varType ID ';'       # commonVarDeclaration
   | varType ID '[' NUM ']' ';'        # arrayVarDeclaration
   ;
 
-structDeclaration : 'struct' ID '{' (varDeclaration)* '}';
+structDeclaration : 'struct' ID '{' (varDeclaration)* '}' ';';
 
 varType : type=('int'
   | 'char'

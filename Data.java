@@ -3,7 +3,7 @@ import java.util.LinkedHashMap;
 public class Data {
   public String id;
   public Pair<String, Integer> tipo;
-  private String dependencia;
+  public String dependencia;
   public LinkedHashMap<String, Pair<String, Integer>> parametros;
   public LinkedHashMap<String, Pair<String, Integer>> variables;
 

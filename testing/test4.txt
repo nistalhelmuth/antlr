@@ -1,9 +1,8 @@
-class Program {
-  int method1(int x, char g) {
-  }
+class Program
+{
 
-  int Main() {
-    method(1, 1);
+  void main()
+  {
+    b.c.a = 'c';
   }
 }
-

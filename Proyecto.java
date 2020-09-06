@@ -24,10 +24,10 @@ public class Proyecto {
     ParseTree tree = parser.program(); 
     // System.out.println(tree.toStringTree(parser));
 
-    File file = new File("logs.txt");
-    PrintStream stream = new PrintStream(file);
-    System.out.println("From now on "+file.getAbsolutePath()+" will have semantic errors");
-    System.setOut(stream);
+    // File file = new File("logs.txt");
+    // PrintStream stream = new PrintStream(file);
+    // System.out.println("From now on "+file.getAbsolutePath()+" will have semantic errors");
+    // System.setOut(stream);
 
     EvalVisitor eval = new EvalVisitor();
     DefaultMutableTreeNode node = eval.visit(tree);
