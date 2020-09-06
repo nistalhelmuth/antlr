@@ -26,3 +26,9 @@ hs_err_pid*
 #ANTLR
 *.tokens
 *.interp
+
+#logs
+logs.txt
+
+#MAC
+.DS_STORE
