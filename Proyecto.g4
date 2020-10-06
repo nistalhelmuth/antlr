@@ -66,16 +66,19 @@ expression : location                                       # expressionLocation
 
 methodCall : ID '(' (expression)? (',' expression)* ')';
 
-op : arithOp                     
+op : highArithOp                     
+  | arithOp                     
   | relOp                   
   | eqOp                    
   | condOp
   ;
 
+highArithOp : simbol=('*'
+  | '/')
+  ;
+
 arithOp : simbol=('+'
   | '-'
-  | '*'
-  | '/'
   | '%')
   ;
 

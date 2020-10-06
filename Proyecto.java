@@ -22,21 +22,21 @@ public class Proyecto {
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     ProyectoParser parser = new ProyectoParser(tokens);
     ParseTree tree = parser.program(); 
-    // System.out.println(tree.toStringTree(parser));
 
-    // File file = new File("logs.txt");
-    // PrintStream stream = new PrintStream(file);
-    // System.out.println("From now on "+file.getAbsolutePath()+" will have semantic errors");
-    // System.setOut(stream);
+    //File file = new File("logs.txt");
+    //PrintStream stream = new PrintStream(file);
+    //System.out.println("From now on "+file.getAbsolutePath()+" will have semantic errors");
+    //System.setOut(stream);
 
     EvalVisitor eval = new EvalVisitor();
-    DefaultMutableTreeNode node = eval.visit(tree);
+    //DefaultMutableTreeNode node = eval.visit(tree);
+    Node root = eval.visit(tree);
     
-    //JFrame frame = new JFrame("Demo");  
-    //JTree jtree = new JTree(node);
-    //frame.add(jtree);
-    //frame.setSize(550,800);
-    //frame.setBounds(10,520, 500,300);  
-    //frame.setVisible(true);
+    // JFrame frame = new JFrame("Demo");  
+    // JTree jtree = new JTree(root.tree);
+    // frame.add(jtree);
+    // frame.setSize(550,800);
+    // frame.setBounds(10,520, 500,300);  
+    // frame.setVisible(true);
   }
 }

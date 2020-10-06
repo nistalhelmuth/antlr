@@ -84,31 +84,16 @@ final class Enviroment {
     return null;
   }
 
+  //arreglar
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx) {
     if (localdata.containsKey(ctx.ID().getText())){
       
       if (ctx.location().location() == null) {
-        //System.out.println(ctx.location().location() == null);
-        //System.out.println(localdata.get(ctx.ID().getText()).dependencia);
         Data dependencia = getVariable(localdata.get(ctx.ID().getText()).dependencia);
-        //System.out.println(dependencia);
-        //System.out.println(dependencia.variables);
-        //System.out.println(ctx.location().ID().getText());
-        //System.out.println();
-        
         return dependencia.variables.get(ctx.location().ID().getText());
       } else if(ctx.location().location().location() == null){
         Data dependencia = getVariable(localdata.get(ctx.ID().getText()).dependencia);
-        //System.out.println(dependencia);
-        //System.out.println(dependencia.variables);
-        //System.out.println(ctx.location().ID().getText());
-        //System.out.println(dependencia.variables.get(ctx.location().ID().getText()));
         Pair<String, Integer> test = dependencia.variables.get(ctx.location().ID().getText());
-        //System.out.println(getVariable(test.getFirst()).variables);
-        //System.out.println("-----");
-        //System.out.println("-----");
-        //System.out.println(getVariable(test.getFirst()).variables.get(ctx.location().location().ID().getText()));
-        //System.out.println(dependencia.variables.get(ctx.location().location();
         return getVariable(test.getFirst()).variables.get(ctx.location().location().ID().getText());
       } else{
         return getStructVariable(ctx.location());

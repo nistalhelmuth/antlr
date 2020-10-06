@@ -1,8 +1,10 @@
 class Program {
-  int a[2];
+  int a;
+  int b;
+  int c;
 
-  void Main(){
-    
+  void main(){
+    c = a + b;
   }
 
 }

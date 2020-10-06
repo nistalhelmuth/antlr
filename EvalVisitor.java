@@ -5,7 +5,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import java.beans.Expression;
 import java.util.*;
 
-public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
+public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   public SimbolTable myTable = new SimbolTable();
 
   private Pair<String, Integer> getLocationType(ProyectoParser.LocationContext ctx){
@@ -90,23 +90,27 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return null;
   }
 
-	@Override public DefaultMutableTreeNode visitProgram(ProyectoParser.ProgramContext ctx) { 
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("Program");
+  // Abstractions
+
+	@Override public Node visitProgram(ProyectoParser.ProgramContext ctx) { 
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("Program");
+    Node node = new Node(treeNode);
     ctx.declaration().forEach(child -> {
-      node.add(visit(child));
+      node.addChild(visit(child));
     });
 
     Data main = myTable.isMainCreated();
     if (main == null || main.parametros == null){
       System.out.println(String.format("%s: Main is invalid or doesnt exits" ,ctx.start.getLine()));
     }
-    //myTable.show();
+    myTable.show();
 
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitDeclaration(ProyectoParser.DeclarationContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("Declaration");
+  @Override public Node visitDeclaration(ProyectoParser.DeclarationContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("Declaration");
+    Node node = new Node(treeNode);
     if (ctx.structDeclaration() != null) {
       node.add(visit(ctx.structDeclaration()));
 
@@ -119,11 +123,12 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitCommonVarDeclaration(ProyectoParser.CommonVarDeclarationContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("commonVarDeclaration");
+  @Override public Node visitCommonVarDeclaration(ProyectoParser.CommonVarDeclarationContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("commonVarDeclaration");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.varType()));
-    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    node.add(IDNode);
+    //DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    //node.add(IDNode);
 
     if (ctx.varType().type != null) {
       myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
@@ -134,24 +139,26 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
         myTable.putCommonVariable(ctx.varType().structDeclaration().ID().getText(), "struct", ctx.ID().getText());
       }
     }  
+
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitArrayVarDeclaration(ProyectoParser.ArrayVarDeclarationContext ctx) { 
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("arrayVarDeclaration");
+  @Override public Node visitArrayVarDeclaration(ProyectoParser.ArrayVarDeclarationContext ctx) { 
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("arrayVarDeclaration");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.varType()));
-    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    node.add(IDNode);
+    // DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    // node.add(IDNode);
+
     Integer numValue;
     try {
-      DefaultMutableTreeNode NUMNode = new DefaultMutableTreeNode(ctx.NUM().getText());
-      node.add(NUMNode);
+      // DefaultMutableTreeNode NUMNode = new DefaultMutableTreeNode(ctx.NUM().getText());
+      // node.add(NUMNode);
       numValue = Integer.parseInt(ctx.NUM().getText());
    } catch(Exception ex) {
       System.out.println(String.format("%s: Unavalible input for array dimention on <%s>", ctx.start.getLine(), ctx.ID().getText()));
       numValue = 0;
    }
-
     if (numValue < 0) {
       System.out.println(String.format("%s: Unavalible size for string %s", ctx.start.getLine(), ctx.ID().getText()));
     } else {
@@ -166,15 +173,17 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
         }
       }
     }
-
     
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitStructDeclaration(ProyectoParser.StructDeclarationContext ctx) { 
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("structDeclaration");
-    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    node.add(IDNode);
+  @Override public Node visitStructDeclaration(ProyectoParser.StructDeclarationContext ctx) { 
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("structDeclaration");
+    Node node = new Node(treeNode);
+    node.add(visit(ctx.varType()));
+    // DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    // node.add(IDNode);
+
     LinkedHashMap<String, Pair<String, Integer>> variables = new LinkedHashMap<String, Pair<String, Integer>>();
     ctx.varDeclaration().forEach(child -> {
       // para que no se declaren los hijos
@@ -219,15 +228,19 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitVarType(ProyectoParser.VarTypeContext ctx) { 
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("varType");
+  @Override public Node visitVarType(ProyectoParser.VarTypeContext ctx) { 
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("varType");
+    Node node = new Node(treeNode);
+    
     // falta el caso para evaluar structs
-    visitChildren(ctx);
+    // visitChildren(ctx);
+
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitMethodDeclaration(ProyectoParser.MethodDeclarationContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("methodDeclaration");
+  @Override public Node visitMethodDeclaration(ProyectoParser.MethodDeclarationContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("methodDeclaration");
+    Node node = new Node(treeNode);
 
     LinkedHashMap<String, Pair<String, Integer>> parameters = new LinkedHashMap<String, Pair<String, Integer>>();
     node.add(visit(ctx.methodType()));
@@ -265,7 +278,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     for (ProyectoParser.StatementContext statement : ctx.block().statement()) {
       if(statement.getClass() == ProyectoParser.ReturnStatementContext.class) {
         ProyectoParser.ReturnStatementContext returnExpr = (ProyectoParser.ReturnStatementContext) statement;
-        if (returnExpr.expression() == null && !ctx.methodType().type.getText().equals("void")) {
+        if (returnExpr.expression() != null && ctx.methodType().type.getText().equals("void")) {
           flag = true;
         } else {
           try {
@@ -292,33 +305,40 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node; 
   }
 
-  @Override public DefaultMutableTreeNode visitMethodType(ProyectoParser.MethodTypeContext ctx) {
-    String name = "MethodType: " + ctx.type.getText();
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode(name);
+  @Override public Node visitMethodType(ProyectoParser.MethodTypeContext ctx) {
+    // String name = "MethodType: " + ctx.type.getText();
+    // DefaultMutableTreeNode node = new DefaultMutableTreeNode(name);
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("MethodType");
+    Node node = new Node(treeNode);
+
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitCommonParameter(ProyectoParser.CommonParameterContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("CommonParameter");
+  @Override public Node visitCommonParameter(ProyectoParser.CommonParameterContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CommonParameter");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.parameterType()));
-    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    node.add(IDNode);
+    // DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    // node.add(IDNode);
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitArrayParameter(ProyectoParser.ArrayParameterContext ctx) {
-
+  @Override public Node visitArrayParameter(ProyectoParser.ArrayParameterContext ctx) {
     return visitChildren(ctx);
   }
 
-  @Override public DefaultMutableTreeNode visitParameterType(ProyectoParser.ParameterTypeContext ctx) {
-    String name = "ParameterType: " + ctx.type.getText();
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode(name);
+  @Override public Node visitParameterType(ProyectoParser.ParameterTypeContext ctx) {
+    // String name = "ParameterType: " + ctx.type.getText();
+    // DefaultMutableTreeNode node = new DefaultMutableTreeNode(name);
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ParameterType");
+    Node node = new Node(treeNode);
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitBlock(ProyectoParser.BlockContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("Block");
+  @Override public Node visitBlock(ProyectoParser.BlockContext ctx) {
+    //DefaultMutableTreeNode node = new DefaultMutableTreeNode("Block");
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ParameterType");
+    Node node = new Node(treeNode);
     ctx.varDeclaration().forEach(child -> {
       node.add(visit(child));
     });
@@ -328,10 +348,10 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitIfStatement(ProyectoParser.IfStatementContext ctx) { 
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("IfStatement");
+  @Override public Node visitIfStatement(ProyectoParser.IfStatementContext ctx) { 
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("IfStatement");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.expression()));
-
     try {
       if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
         System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
@@ -339,36 +359,47 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     } catch (NullPointerException e) {
       System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
     }
-    
-    
 
-
+    myTable.createEnviroment("IF");
     node.add(visit(ctx.block(0)));
+    myTable.returnEnviroment();
+
     if (ctx.block(1) != null) {
+      myTable.createEnviroment("ELSE");
       node.add(visit(ctx.block(1)));
+      myTable.returnEnviroment();
     }
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitWhileStatement(ProyectoParser.WhileStatementContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("WhileStatement");
+  @Override public Node visitWhileStatement(ProyectoParser.WhileStatementContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("WhileStatement");
+    Node node = new Node(treeNode);
     if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
       System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
     }
     node.add(visit(ctx.expression()));
+    myTable.createEnviroment("WHILE");
     node.add(visit(ctx.block()));
+    myTable.returnEnviroment();
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitReturnStatement(ProyectoParser.ReturnStatementContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ReturnStatement");
+  @Override public Node visitReturnStatement(ProyectoParser.ReturnStatementContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ReturnStatement");
+    Node node = new Node(treeNode);
     if (ctx.expression() != null) {
       node.add(visit(ctx.expression()));
     };
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitMethodCallStatement(ProyectoParser.MethodCallStatementContext ctx) {
+  @Override public Node visitMethodCallStatement(ProyectoParser.MethodCallStatementContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("MethodCallStatement");
+    Node node = new Node(treeNode);
+    node.add(visit(ctx.methodCall()));
+
+
     Data methodDefinition = myTable.getVariable(ctx.methodCall().ID().getText());
     if (methodDefinition == null) {
       System.out.println(String.format("%s: method <%s> hasn't been declarated", ctx.start.getLine(), ctx.methodCall().ID().getText()));
@@ -376,19 +407,19 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     //System.out.println(methodDefinition);
 
 
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("MethodCallStatement");
-    node.add(visit(ctx.methodCall()));
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitBlockStatement(ProyectoParser.BlockStatementContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("BlockStatement");
+  @Override public Node visitBlockStatement(ProyectoParser.BlockStatementContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("BlockStatement");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.block()));
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitLocationStatement(ProyectoParser.LocationStatementContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("LocationStatement");
+  @Override public Node visitLocationStatement(ProyectoParser.LocationStatementContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("LocationStatement");
+    Node node = new Node(treeNode);
     //node.add(visit(ctx.location()));
     node.add(visit(ctx.expression()));
 
@@ -400,9 +431,13 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
           System.out.println(String.format("%s: location doenst exists", ctx.start.getLine()));
       } else if (tipoExpression == null) {
         System.out.println(String.format("%s: expression doenst exists", ctx.start.getLine()));
-      }else if(!tipoLocation.getFirst().equals(tipoExpression.getFirst())){
-      //if(!tipoLocation.equals(tipoExpression)){
+      } else if(!tipoLocation.getFirst().equals(tipoExpression.getFirst())){
         System.out.println(String.format("%s: Check types of location and expression", ctx.start.getLine()));
+      } else {
+        String id = ctx.location().ID();
+        //String value = getExpressionValue(ctx.expression());
+
+        // print(Load id, value)
       }
     } catch (NullPointerException e) {
         System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
@@ -413,18 +448,20 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionStatement(ProyectoParser.ExpressionStatementContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionStatement");
+  @Override public Node visitExpressionStatement(ProyectoParser.ExpressionStatementContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionStatement");
+    Node node = new Node(treeNode);
     if (ctx.expression() != null){
       node.add(visit(ctx.expression()));
     }
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitLocation(ProyectoParser.LocationContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("Location");
-    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    node.add(IDNode);
+  @Override public Node visitLocation(ProyectoParser.LocationContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("Location");
+    Node node = new Node(treeNode);
+    //DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    //node.add(IDNode);
     if (ctx.expression() != null) {
       if (getExpressionType(ctx.expression()).getFirst().equals(new Pair<String, Integer>("int").getFirst())) {
       //if (getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("Integer"))) {
@@ -445,14 +482,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionLiteral(ProyectoParser.ExpressionLiteralContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionLiteral");
+  @Override public Node visitExpressionLiteral(ProyectoParser.ExpressionLiteralContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionLiteral");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.literal()));
+    // Node child = visit(ctx.literal());
+    //
+
+    // Node tree = new Node(ctx, node, child.tipo, child.addr, child.tamaño, child.target)
+    // tree.arbol.add(child.arbol)
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionNegative(ProyectoParser.ExpressionNegativeContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionNegative");
+  @Override public Node visitExpressionNegative(ProyectoParser.ExpressionNegativeContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionNegative");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.expression()));
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("int"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
@@ -460,8 +504,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionNot(ProyectoParser.ExpressionNotContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionNot");
+  @Override public Node visitExpressionNot(ProyectoParser.ExpressionNotContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionNot");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.expression()));
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
@@ -469,20 +514,23 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionLocation(ProyectoParser.ExpressionLocationContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionLocation");
+  @Override public Node visitExpressionLocation(ProyectoParser.ExpressionLocationContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionLocation");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.location()));
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionGroup(ProyectoParser.ExpressionGroupContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionGroup");
+  @Override public Node visitExpressionGroup(ProyectoParser.ExpressionGroupContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionGroup");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.expression()));
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionMethodCall(ProyectoParser.ExpressionMethodCallContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionMethodCall");
+  @Override public Node visitExpressionMethodCall(ProyectoParser.ExpressionMethodCallContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionMethodCall");
+    Node node = new Node(treeNode);
     node.add(visit(ctx.methodCall()));
 
     Data method = myTable.getVariable(ctx.methodCall().ID().getText()); 
@@ -496,29 +544,46 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitExpressionCommon(ProyectoParser.ExpressionCommonContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ExpressionCommon");
-    // revisar que las expressiones concuerden con el tipo de operador
+  @Override public Node visitExpressionCommon(ProyectoParser.ExpressionCommonContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionCommon");
+    Node node = new Node(treeNode);
+    node.add(visit(ctx.expression(0)));
+    node.add(visit(ctx.op()));
+    node.add(visit(ctx.expression(1)));
+    // Node child1 = visit(ctx.expression())
+    // Node child1 = visit(ctx.op())
+    // Node child1 = visit(ctx.expression())
+
+
 
     try {
       Pair<String, Integer> tipo0 = getExpressionType(ctx.expression(0));
       Pair<String, Integer> tipo1 = getExpressionType(ctx.expression(1));
-      
       if(ctx.op().arithOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
+        } else {
+          //String value1 = getExpressionValue(ctx);
+          //"t2 = respuesta(expresion0) op respuesta(expresion1)"
         }
       } else if(ctx.op().relOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
+        } else {
+          //String value1 = getExpressionValue(ctx);
+          //"t2 = respuesta(expresion0)  respuesta(expresion1)"
         }
       } else if(ctx.op().eqOp() != null) {
         if(!tipo0.getFirst().equals(tipo1.getFirst())) {
           System.out.println(String.format("Check types of %s: expression must be equal", ctx.start.getLine()));
+        } else {
+          //String value1 = getExpressionValue(ctx);
         }
       } else if(ctx.op().condOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("boolean")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be boolean", ctx.start.getLine()));
+        } else {
+          //String value1 = getExpressionValue(ctx);
         }
       } else {
         System.out.println(String.format("%s: unavalible op on expression", ctx.start.getLine()));
@@ -526,19 +591,14 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
     } catch (NullPointerException e) {
         System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
     }
-
-    
-
-    node.add(visit(ctx.expression(0)));
-    node.add(visit(ctx.op()));
-    node.add(visit(ctx.expression(1)));
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitMethodCall(ProyectoParser.MethodCallContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("MethodCall");
-    DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    node.add(IDNode);
+  @Override public Node visitMethodCall(ProyectoParser.MethodCallContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("MethodCall");
+    Node node = new Node(treeNode);
+    // DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
+    // node.add(IDNode);
 
     Data methodDefinition = myTable.getVariable(ctx.ID().getText());
     if (methodDefinition == null) {
@@ -566,74 +626,75 @@ public class EvalVisitor extends ProyectoBaseVisitor<DefaultMutableTreeNode> {
         }
         i = i+1;
       }
-      /** 
-      ctx.expression().forEach((child) -> {
-        Pair<String, Integer> expressionType = getExpressionType(child);
-        node.add(visit(child));
-
-        Pair<String, Integer> param = (Pair<String,Integer>) methodDefinition.parametros.values().toArray()[0];
-        if(!param.equals(expressionType)){
-          System.out.println(String.format("check param <%s> on method <%s>", 
-            expressionType, 
-            methodDefinition.id
-          ));
-        }
-        i = i+1;
-      });
-      */
     }
     return node;
   }
 
-  @Override public DefaultMutableTreeNode visitOp(ProyectoParser.OpContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("Op");
+  @Override public Node visitOp(ProyectoParser.OpContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("Op");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.simbol.getText()));
     return node;
 
   }
 
-  @Override public DefaultMutableTreeNode visitArithOp(ProyectoParser.ArithOpContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("ArithOp");
+  @Override public Node visitHighArithOp(ProyectoParser.ArithOpContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("HighArithOp");
+    Node node = new Node(treeNode);
+    // node.add(visit(ctx.simbol.getText()));
+    return node;
+  }
+
+  @Override public Node visitArithOp(ProyectoParser.ArithOpContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ArithOp");
+    Node node = new Node(treeNode);
+    // node.add(visit(ctx.simbol.getText()));
+    return node;
+  }
+
+  @Override public Node visitRelOp(ProyectoParser.RelOpContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("RelOp");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.simbol.getText()));
     return node;
 
   }
 
-  @Override public DefaultMutableTreeNode visitRelOp(ProyectoParser.RelOpContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("RelOp");
+  @Override public Node visitEqOp(ProyectoParser.EqOpContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("EqOp");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.simbol.getText()));
     return node;
 
   }
 
-  @Override public DefaultMutableTreeNode visitEqOp(ProyectoParser.EqOpContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("EqOp");
+  @Override public Node visitCondOp(ProyectoParser.CondOpContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CondOp");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.simbol.getText()));
     return node;
 
   }
 
-  @Override public DefaultMutableTreeNode visitCondOp(ProyectoParser.CondOpContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("CondOp");
+  @Override public Node visitIntLiteral(ProyectoParser.IntLiteralContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("IntLiteral");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.simbol.getText()));
+    
+    // Node tree = new Node(ctx, node, 'int', addr?, 4, ctx.NUM().getText())
     return node;
-
   }
-
-  @Override public DefaultMutableTreeNode visitIntLiteral(ProyectoParser.IntLiteralContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("IntLiteral");
+  
+  @Override public Node visitCharLiteral(ProyectoParser.CharLiteralContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CharLiteral");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.simbol.getText()));
     return node;
   }
   
-  @Override public DefaultMutableTreeNode visitCharLiteral(ProyectoParser.CharLiteralContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("CharLiteral");
-    // node.add(visit(ctx.simbol.getText()));
-    return node;
-  }
-  
-  @Override public DefaultMutableTreeNode visitBoolLiteral(ProyectoParser.BoolLiteralContext ctx) {
-    DefaultMutableTreeNode node = new DefaultMutableTreeNode("BoolLiteral");
+  @Override public Node visitBoolLiteral(ProyectoParser.BoolLiteralContext ctx) {
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("BoolLiteral");
+    Node node = new Node(treeNode);
     // node.add(visit(ctx.NUM.getText()));
     return node;
   }
