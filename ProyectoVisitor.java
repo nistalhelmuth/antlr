@@ -202,6 +202,12 @@ public interface ProyectoVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitOp(ProyectoParser.OpContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ProyectoParser#highArithOp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitHighArithOp(ProyectoParser.HighArithOpContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ProyectoParser#arithOp}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

@@ -7,6 +7,19 @@ import java.util.*;
 
 public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   public SimbolTable myTable = new SimbolTable();
+  public Integer registerCount = 0;
+
+  private Integer getRegister(){
+    Integer old = registerCount;
+    registerCount = registerCount + 1;
+    return registerCount;
+  }
+
+  // private Integer freeRegister(){
+  //   Integer old = registerCount;
+  //   registerCount = registerCount + 1;
+  //   return registerCount;
+  // }
 
   private Pair<String, Integer> getLocationType(ProyectoParser.LocationContext ctx){
     if (ctx.location() != null) {
@@ -96,7 +109,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("Program");
     Node node = new Node(treeNode);
     ctx.declaration().forEach(child -> {
-      node.addChild(visit(child));
+      node.add(visit(child));
     });
 
     Data main = myTable.isMainCreated();
@@ -127,11 +140,12 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("commonVarDeclaration");
     Node node = new Node(treeNode);
     node.add(visit(ctx.varType()));
-    //DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
-    //node.add(IDNode);
 
     if (ctx.varType().type != null) {
-      myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
+      Pair<String, Integer> id = myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
+      //falta agregar valor inicial
+      node.addInstruction(String.format("%s[%d]", id.getFirst(), id.getSecond()));
+
     } else { //maneja structs
       if(ctx.varType().ID() != null) {
         myTable.putCommonVariable(ctx.varType().ID().getText(), "struct", ctx.ID().getText());
@@ -180,7 +194,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitStructDeclaration(ProyectoParser.StructDeclarationContext ctx) { 
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("structDeclaration");
     Node node = new Node(treeNode);
-    node.add(visit(ctx.varType()));
+    //node.add(visit(ctx.varType()));
     // DefaultMutableTreeNode IDNode = new DefaultMutableTreeNode(ctx.ID().getText());
     // node.add(IDNode);
 
@@ -337,7 +351,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
 
   @Override public Node visitBlock(ProyectoParser.BlockContext ctx) {
     //DefaultMutableTreeNode node = new DefaultMutableTreeNode("Block");
-    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ParameterType");
+    DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("visitBlock");
     Node node = new Node(treeNode);
     ctx.varDeclaration().forEach(child -> {
       node.add(visit(child));
@@ -420,7 +434,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitLocationStatement(ProyectoParser.LocationStatementContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("LocationStatement");
     Node node = new Node(treeNode);
-    //node.add(visit(ctx.location()));
+    node.add(visit(ctx.location()));
     node.add(visit(ctx.expression()));
 
     try {
@@ -434,7 +448,10 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       } else if(!tipoLocation.getFirst().equals(tipoExpression.getFirst())){
         System.out.println(String.format("%s: Check types of location and expression", ctx.start.getLine()));
       } else {
-        String id = ctx.location().ID();
+        String id = ctx.location().ID().getText();
+        Pair<String, Integer> = myTable.getOffset(id);
+        System.out.println(String.format(" = "));
+
         //String value = getExpressionValue(ctx.expression());
 
         // print(Load id, value)
@@ -486,11 +503,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionLiteral");
     Node node = new Node(treeNode);
     node.add(visit(ctx.literal()));
-    // Node child = visit(ctx.literal());
-    //
-
-    // Node tree = new Node(ctx, node, child.tipo, child.addr, child.tamaño, child.target)
-    // tree.arbol.add(child.arbol)
+    node.addInstruction(String.format("MOV T%d, %s", getRegister(), ctx.literal()));
     return node;
   }
 
@@ -501,6 +514,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("int"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
     }
+    node.addInstruction(String.format("MUL T%d, %s, -1", getRegister(), "REGISTRO DE EXPR"));
     return node;
   }
 
@@ -511,6 +525,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
     }
+    node.addInstruction(String.format("NOT T%d, %s", getRegister(), "REGISTRO DE EXPR"));
     return node;
   }
 
@@ -550,21 +565,30 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     node.add(visit(ctx.expression(0)));
     node.add(visit(ctx.op()));
     node.add(visit(ctx.expression(1)));
-    // Node child1 = visit(ctx.expression())
-    // Node child1 = visit(ctx.op())
-    // Node child1 = visit(ctx.expression())
-
-
 
     try {
       Pair<String, Integer> tipo0 = getExpressionType(ctx.expression(0));
       Pair<String, Integer> tipo1 = getExpressionType(ctx.expression(1));
-      if(ctx.op().arithOp() != null) {
+
+      if(ctx.op().highArithOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         } else {
-          //String value1 = getExpressionValue(ctx);
-          //"t2 = respuesta(expresion0) op respuesta(expresion1)"
+          if(ctx.op().highArithOp().simbol.getText().equals('*')){
+            node.addInstruction(String.format("MUL %s, %s, %s", format));
+          } else {
+            node.addInstruction(String.format("DIV %s, %s, %s", format));
+          }
+        }
+      } else if(ctx.op().arithOp() != null) {
+        if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
+          System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
+        } else {
+          if(ctx.op().ArithOp().simbol.getText().equals('+')){
+            node.addInstruction(String.format("ADD %s, %s, %s", format));
+          } else {
+            node.addInstruction(String.format("SUB %s, %s, %s", format));
+          }
         }
       } else if(ctx.op().relOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
@@ -583,7 +607,11 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         if(!tipo0.equals(new Pair<String, Integer>("boolean")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be boolean", ctx.start.getLine()));
         } else {
-          //String value1 = getExpressionValue(ctx);
+          if(ctx.op().ArithOp().simbol.getText().equals("==")){
+            node.addInstruction(String.format("CMP %s, %s, %s", format));
+          } else {
+            node.addInstruction(String.format("CMN %s, %s, %s", format));
+          }
         }
       } else {
         System.out.println(String.format("%s: unavalible op on expression", ctx.start.getLine()));
@@ -604,14 +632,11 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if (methodDefinition == null) {
       System.out.println(String.format("%s: method <%s> hasn't been declarated", ctx.start.getLine(), ctx.ID().getText()));
     }
-
     if (ctx.expression() != null) {
       Integer i = 0;
       for ( ProyectoParser.ExpressionContext child : ctx.expression()){
         node.add(visit(child));
-
         Pair<String, Integer> expressionType = getExpressionType(child);
-
         if (i < methodDefinition.parametros.values().toArray().length){
           Pair<String, Integer> param = (Pair<String,Integer>) methodDefinition.parametros.values().toArray()[i];
           if(param != null && !param.equals(expressionType)){
@@ -633,29 +658,40 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitOp(ProyectoParser.OpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("Op");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    if (ctx.highArithOp() != null) {
+      node.add(visit(ctx.highArithOp()));
+    } else if (ctx.arithOp() != null) {
+      node.add(visit(ctx.arithOp()));
+    } else if (ctx.relOp() != null) {
+      node.add(visit(ctx.relOp()));
+    } else if (ctx.eqOp() != null) {
+      node.add(visit(ctx.eqOp()));
+    } else if (ctx.condOp() != null) {
+      node.add(visit(ctx.condOp()));
+    };
+    node.addInstruction(node.childs[0].target[0]);
     return node;
 
   }
 
-  @Override public Node visitHighArithOp(ProyectoParser.ArithOpContext ctx) {
+  @Override public Node visitHighArithOp(ProyectoParser.HighArithOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("HighArithOp");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    node.addInstruction(ctx.simbol.getText());
     return node;
   }
 
   @Override public Node visitArithOp(ProyectoParser.ArithOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ArithOp");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    node.addInstruction(ctx.simbol.getText());
     return node;
   }
 
   @Override public Node visitRelOp(ProyectoParser.RelOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("RelOp");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    node.addInstruction(ctx.simbol.getText());
     return node;
 
   }
@@ -663,7 +699,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitEqOp(ProyectoParser.EqOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("EqOp");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    node.addInstruction(ctx.simbol.getText());
     return node;
 
   }
@@ -671,7 +707,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitCondOp(ProyectoParser.CondOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CondOp");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    node.addInstruction(ctx.simbol.getText());
     return node;
 
   }
@@ -679,23 +715,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitIntLiteral(ProyectoParser.IntLiteralContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("IntLiteral");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
-    
-    // Node tree = new Node(ctx, node, 'int', addr?, 4, ctx.NUM().getText())
+    node.addInstruction(ctx.NUM().getText());
     return node;
   }
   
   @Override public Node visitCharLiteral(ProyectoParser.CharLiteralContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CharLiteral");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.simbol.getText()));
+    node.addInstruction(ctx.CHAR().getText());
     return node;
   }
   
   @Override public Node visitBoolLiteral(ProyectoParser.BoolLiteralContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("BoolLiteral");
     Node node = new Node(treeNode);
-    // node.add(visit(ctx.NUM.getText()));
+    node.addInstruction(ctx.BOOL().getText());
     return node;
   }
   

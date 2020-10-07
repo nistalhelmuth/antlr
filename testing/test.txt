@@ -1,10 +1,6 @@
 class Program {
-  int a;
-  int b;
-  int c;
-
   void main(){
-    c = a + b;
+    int a;
+    a = 1;
   }
-
 }

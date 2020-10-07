@@ -4,71 +4,101 @@ import java.util.LinkedHashMap;
 final class Enviroment {
   public String id;
   private Enviroment father;
+  private Integer offset;
   private LinkedHashMap<String, Data> localdata = new LinkedHashMap<String, Data>();
+
+  public Integer getSize(String type) {
+    if(type.equals("int")){
+      return 4;
+    } else if (type.equals("boolean")){
+      return 1;
+    } else if (type.equals("char")){
+      return 2;
+    }
+    return 0;
+  }
 
   public Enviroment(){
     this.id = "global";
+    this.offset = 0;
   }
 
   public Enviroment(String id, Enviroment father) {
     this.id = id;
     this.father = father;
+    this.offset = 0;
   }
 
-  public void putCommonVariable(String type, String id) {
+  public Integer putCommonVariable(String type, String id) {
     Data data = new Data(id, type);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
-    } else {
-      System.out.println(String.format("duplicate value %s", id));
-    }
+      Integer oldOffset = offset;
+      offset = offset + getSize(type);
+      return oldOffset;
+    } 
+
+    System.out.println(String.format("duplicate value %s", id));
+    return -1;
   }
 
-  public void putCommonVariable(String dependecy, String type, String id) {
+  public Integer putCommonVariable(String dependecy, String type, String id) {
     // revisar que dependency ya haya sido creado aqui o en father
     Data data = new Data(dependecy, id, type);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
-    } else {
-      System.out.println(String.format("duplicate value %s", id));
-    }
+      Integer oldOffset = offset;
+      //calcular tamaño
+      offset = offset + 10;
+      return oldOffset;
+    } 
+    System.out.println(String.format("duplicate value %s", id));
+    return -1;
   }
 
-  public void putArrayVariable(String type, String id, Integer size) {
+  public Integer putArrayVariable(String type, String id, Integer size) {
     Data data = new Data(id, type, size);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
-    } else {
-      System.out.println(String.format("duplicate value %s", id));
+      Integer oldOffset = offset;
+      offset = offset + getSize(type) * size;
+      return oldOffset;
     }
+    System.out.println(String.format("duplicate value %s", id));
+    return -1;
   }
 
-  public void putArrayVariable(String dependecy, String type, String id, Integer size) {
+  public Integer putArrayVariable(String dependecy, String type, String id, Integer size) {
     //revisar que dependecy ya haya sido creado
     Data data = new Data(dependecy, id, type, size);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
-    } else {
-      System.out.println(String.format("duplicate value %s", id));
-    }
+      Integer oldOffset = offset;
+      offset = offset + 10 * size;
+      return 10 * size;
+    } 
+    System.out.println(String.format("duplicate value %s", id));
+    return -1;
   }
 
-  public void putMethodVariable(String type, String id, LinkedHashMap<String, Pair<String, Integer>> parameters) {
+  public Integer putMethodVariable(String type, String id, LinkedHashMap<String, Pair<String, Integer>> parameters) {
     Data data = new Data(id, type, parameters);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
     } else {
       System.out.println(String.format("duplicate value %s", id));
     }
+    return 0;
   }
 
-  public void putStructVariable(String id, LinkedHashMap<String, Pair<String, Integer>> variables){
+  public Integer putStructVariable(String id, LinkedHashMap<String, Pair<String, Integer>> variables){
     Data data = new Data(id, variables);
     if (! localdata.containsKey(id)) {
       localdata.put(id, data);
     } else {
       System.out.println(String.format("duplicate value %s, ", id));
     }
+    return 0;
   }
 
   public Data getVariable(String id) {
@@ -82,6 +112,10 @@ final class Enviroment {
       return father.getVariable(id);
     }
     return null;
+  }
+
+  public Integer getOffset(String id){
+    return 0;
   }
 
   //arreglar
@@ -158,38 +192,38 @@ public class SimbolTable {
   }
 
   // commonVariable
-  public void putCommonVariable(String type, String id){
+  public Pair<String, Integer> putCommonVariable(String type, String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.putCommonVariable(type, id);
+    return new Pair<String, Integer>(currentEnviroment.id, currentEnviroment.putCommonVariable(type, id));
   }
 
   // commonVariable (struct)
-  public void putCommonVariable(String dependecy, String type, String id){
+  public Pair<String, Integer> putCommonVariable(String dependecy, String type, String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.putCommonVariable(dependecy, type, id);
+    return new Pair<String, Integer>(currentEnviroment.id, currentEnviroment.putCommonVariable(dependecy, type, id));
   }
 
   // arrayVariable
-  public void putArrayVariable(String type, String id, int size){
+  public Pair<String, Integer> putArrayVariable(String type, String id, int size){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.putArrayVariable(type, id, size);
+    return new Pair<String, Integer>(currentEnviroment.id, currentEnviroment.putArrayVariable(type, id, size));
   }
 
   // arrayVariable (struct)
-  public void putArrayVariable(String dependecy, String type, String id, int size){
+  public Pair<String, Integer> putArrayVariable(String dependecy, String type, String id, int size){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.putArrayVariable(dependecy, type, id, size);
+    return new Pair<String, Integer>(currentEnviroment.id, currentEnviroment.putArrayVariable(dependecy, type, id, size));
   }
 
-  public void putMethodVariable(String type, String id, LinkedHashMap<String, Pair<String, Integer>> parameters){
+  public Pair<String, Integer> putMethodVariable(String type, String id, LinkedHashMap<String, Pair<String, Integer>> parameters){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.putMethodVariable(type, id, parameters);
+    return new Pair<String, Integer>(currentEnviroment.id, currentEnviroment.putMethodVariable(type, id, parameters));
 
   }
 
-  public void putStructVariable(String id, LinkedHashMap<String, Pair<String,Integer>> variables){
+  public Pair<String, Integer> putStructVariable(String id, LinkedHashMap<String, Pair<String,Integer>> variables){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    currentEnviroment.putStructVariable(id, variables);
+    return new Pair<String, Integer>(currentEnviroment.id, currentEnviroment.putStructVariable(id, variables));
   }
 
   /*
@@ -199,6 +233,11 @@ public class SimbolTable {
   public Data getVariable(String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
     return currentEnviroment.getVariable(id);
+  }
+
+  public Integer getOffset(String id){
+    //segun el eviroment
+    return getOffset(id);
   }
 
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx){
