@@ -1,25 +1,33 @@
+import java.util.Stack;  
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.swing.tree.DefaultMutableTreeNode;
 
-import java.beans.Expression;
 import java.util.*;
 
 public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   public SimbolTable myTable = new SimbolTable();
+  public Stack<Integer> freeRegisters = new Stack<Integer>();
+  public Stack<Integer> usedRegisters = new Stack<Integer>();
   public Integer registerCount = 0;
 
-  private Integer getRegister(){
-    Integer old = registerCount;
-    registerCount = registerCount + 1;
-    return registerCount;
+  public EvalVisitor(){
+    freeRegisters.push(3);
+    freeRegisters.push(2);
+    freeRegisters.push(1);
   }
 
-  // private Integer freeRegister(){
-  //   Integer old = registerCount;
-  //   registerCount = registerCount + 1;
-  //   return registerCount;
-  // }
+  private Integer getRegister(){
+    Integer reg = freeRegisters.pop();
+    usedRegisters.push(reg);
+    return reg;
+  }
+
+  private Integer getLastRegister(){
+    Integer reg = usedRegisters.pop();
+    freeRegisters.push(reg);
+    return reg;
+  }
 
   private Pair<String, Integer> getLocationType(ProyectoParser.LocationContext ctx){
     if (ctx.location() != null) {
@@ -116,7 +124,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if (main == null || main.parametros == null){
       System.out.println(String.format("%s: Main is invalid or doesnt exits" ,ctx.start.getLine()));
     }
-    myTable.show();
+    //myTable.show();
 
     return node; 
   }
@@ -144,7 +152,16 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if (ctx.varType().type != null) {
       Pair<String, Integer> id = myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
       //falta agregar valor inicial
-      node.addInstruction(String.format("%s[%d]", id.getFirst(), id.getSecond()));
+      String type = ctx.varType().type.getText();
+      String defaultValue = "";
+      if(type.equals("int")){
+        defaultValue = "0";
+      } else if (type.equals("char")){
+        defaultValue = "";
+      } else if (type.equals("bool")) {
+        defaultValue = "true";
+      }
+      node.addInstruction(String.format("%s[%d] = %s", id.getFirst(), id.getSecond(), defaultValue));
 
     } else { //maneja structs
       if(ctx.varType().ID() != null) {
@@ -449,18 +466,13 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         System.out.println(String.format("%s: Check types of location and expression", ctx.start.getLine()));
       } else {
         String id = ctx.location().ID().getText();
-        Pair<String, Integer> = myTable.getOffset(id);
-        System.out.println(String.format(" = "));
-
-        //String value = getExpressionValue(ctx.expression());
-
-        // print(Load id, value)
+        System.out.println(id);
+        Pair<String, Integer> pair = myTable.getOffset(id);
+        node.addInstruction(String.format("%s[%d] = T%s", pair.getFirst(), pair.getSecond(), getLastRegister()));
       }
     } catch (NullPointerException e) {
         System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
     }
-    
-    
     
     return node;
   }
@@ -503,7 +515,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionLiteral");
     Node node = new Node(treeNode);
     node.add(visit(ctx.literal()));
-    node.addInstruction(String.format("MOV T%d, %s", getRegister(), ctx.literal()));
+    if(ctx.literal().getClass() == ProyectoParser.IntLiteralContext.class){
+      ProyectoParser.IntLiteralContext literalType = (ProyectoParser.IntLiteralContext) ctx.literal();
+      node.addInstruction(String.format("T%d = %s", getRegister(), literalType.NUM().getText()));
+
+    } else if(ctx.literal().getClass() == ProyectoParser.CharLiteralContext.class){
+      ProyectoParser.CharLiteralContext literalType = (ProyectoParser.CharLiteralContext) ctx.literal();
+      node.addInstruction(String.format("T%d = %s", getRegister(), literalType.CHAR().getText()));
+
+    } else if (ctx.literal().getClass() == ProyectoParser.BoolLiteralContext.class){
+      ProyectoParser.BoolLiteralContext literalType = (ProyectoParser.BoolLiteralContext) ctx.literal();
+      node.addInstruction(String.format("T%d = %s", getRegister(), literalType.BOOL().getText()));
+
+    } else {
+      System.out.println("unknown literal");
+    }
     return node;
   }
 
@@ -514,7 +540,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("int"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
     }
-    node.addInstruction(String.format("MUL T%d, %s, -1", getRegister(), "REGISTRO DE EXPR"));
+    node.addInstruction(String.format("T%d = -%s", getRegister(), "REGISTRO DE EXPR"));
     return node;
   }
 
@@ -525,7 +551,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
     }
-    node.addInstruction(String.format("NOT T%d, %s", getRegister(), "REGISTRO DE EXPR"));
+    node.addInstruction(String.format("T%d = !%s", getRegister(), "REGISTRO DE EXPR"));
     return node;
   }
 
@@ -574,20 +600,28 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         } else {
-          if(ctx.op().highArithOp().simbol.getText().equals('*')){
-            node.addInstruction(String.format("MUL %s, %s, %s", format));
+          if(ctx.op().highArithOp().simbol.getText().equals("*")){
+            Integer temp2 = getLastRegister();
+            Integer temp1 = getLastRegister();
+            node.addInstruction(String.format("T%d = T%d * T%d", getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("DIV %s, %s, %s", format));
+            Integer temp2 = getLastRegister();
+            Integer temp1 = getLastRegister();
+            node.addInstruction(String.format("T%d = T%d / T%d", getRegister(), temp1, temp2));
           }
         }
       } else if(ctx.op().arithOp() != null) {
         if(!tipo0.equals(new Pair<String, Integer>("int")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         } else {
-          if(ctx.op().ArithOp().simbol.getText().equals('+')){
-            node.addInstruction(String.format("ADD %s, %s, %s", format));
+          if(ctx.op().arithOp().simbol.getText().equals("+")){
+            Integer temp2 = getLastRegister();
+            Integer temp1 = getLastRegister();
+            node.addInstruction(String.format("T%d = T%d + T%d", getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("SUB %s, %s, %s", format));
+            Integer temp2 = getLastRegister();
+            Integer temp1 = getLastRegister();
+            node.addInstruction(String.format("T%d = T%d - T%d", getRegister(), temp1, temp2));
           }
         }
       } else if(ctx.op().relOp() != null) {
@@ -607,10 +641,14 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         if(!tipo0.equals(new Pair<String, Integer>("boolean")) || !tipo0.equals(tipo1)) {
           System.out.println(String.format("Check types of %s: expression must be boolean", ctx.start.getLine()));
         } else {
-          if(ctx.op().ArithOp().simbol.getText().equals("==")){
-            node.addInstruction(String.format("CMP %s, %s, %s", format));
+          if(ctx.op().arithOp().simbol.getText().equals("==")){
+            Integer temp2 = getLastRegister();
+            Integer temp1 = getLastRegister();
+            node.addInstruction(String.format("CMP T%d, T%d, T%d", getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("CMN %s, %s, %s", format));
+            Integer temp2 = getLastRegister();
+            Integer temp1 = getLastRegister();
+            node.addInstruction(String.format("CMN T%d, T%d, T%d", getRegister(), temp1, temp2));
           }
         }
       } else {
@@ -669,7 +707,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     } else if (ctx.condOp() != null) {
       node.add(visit(ctx.condOp()));
     };
-    node.addInstruction(node.childs[0].target[0]);
+    //node.addInstruction(node.childs[0].target[0]);
     return node;
 
   }
@@ -677,21 +715,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitHighArithOp(ProyectoParser.HighArithOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("HighArithOp");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.simbol.getText());
+    // node.addInstruction(ctx.simbol.getText());
     return node;
   }
 
   @Override public Node visitArithOp(ProyectoParser.ArithOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ArithOp");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.simbol.getText());
+    // node.addInstruction(ctx.simbol.getText());
     return node;
   }
 
   @Override public Node visitRelOp(ProyectoParser.RelOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("RelOp");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.simbol.getText());
+    // node.addInstruction(ctx.simbol.getText());
     return node;
 
   }
@@ -699,7 +737,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitEqOp(ProyectoParser.EqOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("EqOp");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.simbol.getText());
+    // node.addInstruction(ctx.simbol.getText());
     return node;
 
   }
@@ -707,7 +745,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitCondOp(ProyectoParser.CondOpContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CondOp");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.simbol.getText());
+    // node.addInstruction(ctx.simbol.getText());
     return node;
 
   }
@@ -715,21 +753,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitIntLiteral(ProyectoParser.IntLiteralContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("IntLiteral");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.NUM().getText());
+    // node.addInstruction(ctx.NUM().getText());
     return node;
   }
   
   @Override public Node visitCharLiteral(ProyectoParser.CharLiteralContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("CharLiteral");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.CHAR().getText());
+    // node.addInstruction(ctx.CHAR().getText());
     return node;
   }
   
   @Override public Node visitBoolLiteral(ProyectoParser.BoolLiteralContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("BoolLiteral");
     Node node = new Node(treeNode);
-    node.addInstruction(ctx.BOOL().getText());
+    // node.addInstruction(ctx.BOOL().getText());
     return node;
   }
   

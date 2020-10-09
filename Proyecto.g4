@@ -92,8 +92,8 @@ eqOp : simbol=('=='
   | '!=')
   ;
 
-condOp : 'simbol=(&&'
-  | '||'
+condOp : simbol=('&&'
+  | '||')
   ;
 
 literal : NUM     # intLiteral        

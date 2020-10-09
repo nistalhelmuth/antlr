@@ -235,9 +235,10 @@ public class SimbolTable {
     return currentEnviroment.getVariable(id);
   }
 
-  public Integer getOffset(String id){
+  public Pair<String, Integer> getOffset(String id){
     //segun el eviroment
-    return getOffset(id);
+    Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
+    return new Pair<String, Integer> (currentEnviroment.id, currentEnviroment.getOffset(id));
   }
 
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx){

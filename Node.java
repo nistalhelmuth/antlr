@@ -6,7 +6,7 @@ public class Node {
   public DefaultMutableTreeNode tree;
   private Integer numChilds;
   private Integer numTargets;
-  public String[] target;
+  public String[] targets;
   public Node[] childs;
 
   public Node(DefaultMutableTreeNode root){
@@ -14,7 +14,7 @@ public class Node {
     this.numChilds = 0;    
     this.numTargets = 0;    
     this.childs = new Node[10];
-    this.target = new String[10];
+    this.targets = new String[10];
     this.tree = root;
   }
 
@@ -25,13 +25,16 @@ public class Node {
   }
   
   public void addInstruction(String instruction){
-    target[numTargets] = instruction;
+    targets[numTargets] = instruction;
     numTargets = numTargets + 1;
   }
 
   public void translate(){
-      //por cada hijo
-      //hijo.translate
-      //print target
+    for (int i = 0; i < numChilds; i++) {
+      childs[i].translate();
+    }
+    for (int i = 0; i < numTargets; i++) {
+      System.out.println(targets[i]);
+    }
   }
 }

@@ -44,8 +44,7 @@ public class ProyectoParser extends Parser {
 			null, "'class'", "'Program'", "'{'", "'}'", "';'", "'['", "']'", "'struct'", 
 			"'int'", "'char'", "'boolean'", "'void'", "'('", "','", "')'", "'if'", 
 			"'else'", "'while'", "'return'", "'='", "'.'", "'-'", "'!'", "'*'", "'/'", 
-			"'+'", "'%'", "'<'", "'>'", "'<='", "'>='", "'=='", "'!='", "'simbol=(&&'", 
-			"'||'"
+			"'+'", "'%'", "'<'", "'>'", "'<='", "'>='", "'=='", "'!='", "'&&'", "'||'"
 		};
 	}
 	private static final String[] _LITERAL_NAMES = makeLiteralNames();
@@ -1636,6 +1635,7 @@ public class ProyectoParser extends Parser {
 	}
 
 	public static class CondOpContext extends ParserRuleContext {
+		public Token simbol;
 		public CondOpContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -1655,9 +1655,10 @@ public class ProyectoParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(232);
+			((CondOpContext)_localctx).simbol = _input.LT(1);
 			_la = _input.LA(1);
 			if ( !(_la==T__33 || _la==T__34) ) {
-			_errHandler.recoverInline(this);
+				((CondOpContext)_localctx).simbol = (Token)_errHandler.recoverInline(this);
 			}
 			else {
 				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
