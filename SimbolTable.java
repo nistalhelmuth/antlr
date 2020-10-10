@@ -6,18 +6,6 @@ final class Enviroment {
   private Enviroment father;
   private Integer offset;
   private LinkedHashMap<String, Data> localdata = new LinkedHashMap<String, Data>();
-
-  public Integer getSize(String type) {
-    if(type.equals("int")){
-      return 4;
-    } else if (type.equals("boolean")){
-      return 1;
-    } else if (type.equals("char")){
-      return 2;
-    }
-    return 0;
-  }
-
   public Enviroment(){
     this.id = "global";
     this.offset = 0;
@@ -33,7 +21,7 @@ final class Enviroment {
     if (! localdata.containsKey(id)) {
       Data data = new Data(id, type, offset);
       localdata.put(id, data);
-      offset = offset + getSize(type);
+      offset = offset + data.size;
       return data.offset;
     } 
     System.out.println(String.format("duplicate value %s", id));
@@ -45,8 +33,7 @@ final class Enviroment {
     if (! localdata.containsKey(id)) {
       Data data = new Data(dependecy, id, type, offset);
       localdata.put(id, data);
-      //calcular tamaño
-      offset = offset + 10;
+      offset = offset + data.size;
       return data.offset;
     } 
     System.out.println(String.format("duplicate value %s", id));
@@ -57,7 +44,7 @@ final class Enviroment {
     if (! localdata.containsKey(id)) {
       Data data = new Data(id, type, size, offset);
       localdata.put(id, data);
-      offset = offset + getSize(type) * size;
+      offset = offset + data.size;
       return data.offset;
     }
     System.out.println(String.format("duplicate value %s", id));
@@ -65,11 +52,12 @@ final class Enviroment {
   }
 
   public Integer putArrayVariable(String dependecy, String type, String id, Integer size) {
-    //revisar que dependecy ya haya sido creado
     if (! localdata.containsKey(id)) {
-      Data data = new Data(dependecy, id, type, size, offset);
+      //revisar que dependecy ya haya sido creado
+      Data dependecyData = getVariable(dependecy);
+      Data data = new Data(dependecyData, id, type, size, offset);
       localdata.put(id, data);
-      offset = offset + 10 * size;
+      offset = offset + data.size;
       return data.offset;
     } 
     System.out.println(String.format("duplicate value %s", id));
@@ -80,8 +68,7 @@ final class Enviroment {
     if (! localdata.containsKey(id)) {
       Data data = new Data(id, type, parameters, offset);
       localdata.put(id, data);
-      //calcular offset
-      offset = offset + 10;
+      offset = offset + data.size;
       return data.offset;
     }
     System.out.println(String.format("duplicate value %s", id));
@@ -92,8 +79,7 @@ final class Enviroment {
     if (! localdata.containsKey(id)) {
       Data data = new Data(id, variables, offset);
       localdata.put(id, data);
-      //calcular offset
-      offset = offset + 10;
+      offset = offset + data.size;
       return data.offset;
     }
     System.out.println(String.format("duplicate value %s, ", id));
@@ -113,14 +99,9 @@ final class Enviroment {
     return null;
   }
 
-  public Integer getOffset(String id){
-    return localdata.get(id).offset;
-  }
-
   //arreglar
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx) {
     if (localdata.containsKey(ctx.ID().getText())){
-      
       if (ctx.location().location() == null) {
         Data dependencia = getVariable(localdata.get(ctx.ID().getText()).dependencia);
         return dependencia.variables.get(ctx.location().ID().getText());
@@ -236,7 +217,7 @@ public class SimbolTable {
 
   public Pair<String, Integer> getOffset(String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    return new Pair<String, Integer> (currentEnviroment.id, currentEnviroment.getOffset(id));
+    return new Pair<String, Integer> (currentEnviroment.id, currentEnviroment.getVariable(id).offset);
   }
 
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx){

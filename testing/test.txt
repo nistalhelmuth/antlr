@@ -1,13 +1,8 @@
 class Program {
   void main(){
-    int y;
+    int y[2];
+    int z;
     int x;
-    if ((x!=1) || (x!=y) && (x<=y)) {
-      x=3;
-    } else {
-      x=5;
-    }
-       
   }
 }
 

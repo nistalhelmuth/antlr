@@ -5,14 +5,27 @@ public class Data {
   public Pair<String, Integer> tipo;
   public String dependencia;
   public Integer offset;
+  public Integer size = 0;
   public LinkedHashMap<String, Pair<String, Integer>> parametros;
   public LinkedHashMap<String, Pair<String, Integer>> variables;
+
+  public Integer getSize(String type) {
+    if(type.equals("int")){
+      return 4;
+    } else if (type.equals("boolean")){
+      return 1;
+    } else if (type.equals("char")){
+      return 2;
+    }
+    return 0;
+  }
 
   //CommonVariable
   public Data(String id, String type, Integer offset) {
     this.id = id;
     this.offset = offset;
     this.tipo = new Pair<String,Integer>(type);
+    this.size = getSize(type);
   }
 
   //commonVariable (struct)
@@ -21,6 +34,7 @@ public class Data {
     this.offset = offset;
     this.id = id;
     this.tipo = new Pair<String,Integer>(type);
+    this.size = getSize(type);
   }
 
   //ArrayVariable
@@ -28,14 +42,16 @@ public class Data {
     this.id = id;
     this.offset = offset;
     this.tipo = new Pair<String,Integer>(type, size);
+    this.size = getSize(type) * size;
   }
 
   //ArrayVariable (struct)
-  public Data(String dependecy, String id, String type, Integer size, Integer offset) {
-    this.dependencia = dependecy;
+  public Data(Data dependecy, String id, String type, Integer size, Integer offset) {
+    this.dependencia = dependecy.id;
     this.offset = offset;
     this.id = id;
     this.tipo = new Pair<String,Integer>(type, size);
+    this.size = getSize(type) * dependecy.size;
   }
 
   //MethodVariable
@@ -44,6 +60,7 @@ public class Data {
     this.offset = offset;
     this.tipo = new Pair<String,Integer>(type);
     this.parametros = parameters;
+    this.size = 0;
   }
 
   //StructVariable
@@ -52,6 +69,13 @@ public class Data {
     this.offset = offset;
     this.tipo = new Pair<String,Integer>("struct");
     this.variables = variables;
+    for (Pair<String, Integer> variable : variables.values()) {
+      if (variable.getSecond() != null) {
+        this.size = this.size + getSize(variable.getFirst()) * variable.getSecond();
+      } else {
+        this.size = this.size + getSize(variable.getFirst());
+      }
+    }
   }
 
   public String toString() {

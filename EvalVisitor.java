@@ -65,7 +65,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       return data.tipo;
     } else if(ctx.getClass() == ProyectoParser.ExpressionLiteralContext.class){
       ProyectoParser.ExpressionLiteralContext test = (ProyectoParser.ExpressionLiteralContext) ctx;
-      //System.out.println(test.literal().getClass());
       if (test.literal().getClass() == ProyectoParser.BoolLiteralContext.class) {
         return new Pair<String, Integer>("boolean");
       } else if(test.literal().getClass() == ProyectoParser.CharLiteralContext.class) {
@@ -165,7 +164,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
 
     if (ctx.varType().type != null) {
       Pair<String, Integer> id = myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
-      //falta agregar valor inicial
       String type = ctx.varType().type.getText();
       String defaultValue = "";
       if(type.equals("int")){
@@ -176,7 +174,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         defaultValue = "true";
       }
       node.addInstruction(String.format("%s[%d] = %s", id.getFirst(), id.getSecond(), defaultValue));
-
     } else { //maneja structs
       if(ctx.varType().ID() != null) {
         myTable.putCommonVariable(ctx.varType().ID().getText(), "struct", ctx.ID().getText());
@@ -196,16 +193,27 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     Integer numValue;
     try {
       numValue = Integer.parseInt(ctx.NUM().getText());
-   } catch(Exception ex) {
+    } catch(Exception ex) {
       System.out.println(String.format("%s: Unavalible input for array dimention on <%s>", ctx.start.getLine(), ctx.ID().getText()));
       numValue = 0;
-   }
+    }
     if (numValue < 0) {
       System.out.println(String.format("%s: Unavalible size for string %s", ctx.start.getLine(), ctx.ID().getText()));
     } else {
       if (ctx.varType().type != null) {
         //revisar que NUM sea int
-        myTable.putArrayVariable(ctx.varType().type.getText(), ctx.ID().getText(), numValue);
+        Pair<String, Integer> id = myTable.putArrayVariable(ctx.varType().type.getText(), ctx.ID().getText(), numValue);
+        //agregar asignación a cada particion?
+        String type = ctx.varType().type.getText();
+        String defaultValue = "";
+        if(type.equals("int")){
+          defaultValue = "0";
+        } else if (type.equals("char")){
+          defaultValue = "";
+        } else if (type.equals("bool")) {
+          defaultValue = "true";
+        }
+        node.addInstruction(String.format("%s[%d] = array<%s, %s>", id.getFirst(), id.getSecond(), numValue, defaultValue));
       } else {
         if(ctx.varType().ID() != null) {
           myTable.putArrayVariable(ctx.varType().ID().getText() ,"struct", ctx.ID().getText(), numValue);
@@ -531,6 +539,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     node.add(visit(ctx.location()));
     Pair<String, Integer> pair = myTable.getOffset(ctx.location().ID().getText());
     node.addInstruction(String.format("T%d = %s[%d]", getRegister(), pair.getFirst(), pair.getSecond()));
+
     return node;
   }
 
