@@ -439,22 +439,19 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         node.addInstruction(String.format("goto L%d", label2));
         useLabel();
         node.addInstruction(String.format("L%d:", label1));
-        // myTable.createEnviroment("IF");
-        //node.add(visit(ctx.block(0)));
-        node.addInstruction("BLOQUE1");
-        // myTable.returnEnviroment();
+        myTable.createEnviroment(String.format("%s-IF", myTable.peekEnviroment()));
+        node.add(visit(ctx.block(0)));
+        myTable.returnEnviroment();
         useLabel();
         node.addInstruction(String.format("goto L%d", label3));
-        
         node.addInstruction(String.format("L%d:", label2));
         useLabel();
         if (ctx.block(1) != null) {
-          //node.add(visit(ctx.block(1)));
-          node.addInstruction("BLOQUE2");
-          // myTable.returnEnviroment();
+          myTable.createEnviroment(String.format("%s-ELSE", myTable.peekEnviroment()));
+          node.add(visit(ctx.block(1)));
+          myTable.returnEnviroment();
         } 
         node.addInstruction(String.format("L%d:", label3));
-
       }
     } catch (NullPointerException e) {
       System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
@@ -467,19 +464,24 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     Node node = new Node(treeNode);
     if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
       System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
+    } else {
+      Integer label1 = createLabel();
+      Integer label2 = createLabel();
+      Integer label3 = createLabel();
+      
+      useLabel();
+      node.addInstruction(String.format("L%d:", label1));
+      node = shortCircuitExpression(node, ctx.expression(), label2, label3);
+      node.addInstruction(String.format("goto L%d", label3));
+      useLabel();
+      node.addInstruction(String.format("L%d:", label2));
+      myTable.createEnviroment(String.format("%s-WHILE", myTable.peekEnviroment()));
+      node.add(visit(ctx.block()));
+      myTable.returnEnviroment();
+      node.addInstruction(String.format("goto L%d", label1));
+      useLabel();
+      node.addInstruction(String.format("L%d:", label3));
     }
-
-    createLabel();
-    node.addInstruction(String.format("L%d:", useLabel()));
-    createLabel();
-    node.add(visit(ctx.expression()));
-    node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), createLabel()));
-
-    // myTable.createEnviroment("WHILE");
-    node.add(visit(ctx.block()));
-    // myTable.returnEnviroment();
-    node.addInstruction(String.format("goto L%d", useLabel()));
-    node.addInstruction(String.format("L%d:", useLabel()));
     return node;
   }
 

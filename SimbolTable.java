@@ -160,6 +160,10 @@ public class SimbolTable {
     enviromentStack.push(id);
   }
 
+  public String peekEnviroment() {
+    return enviroments.get(enviromentStack.peek()).id;
+  }
+
   public String returnEnviroment(){
     // revisar que no haga pop de global
     String enviroment = enviromentStack.peek();
