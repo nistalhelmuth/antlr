@@ -170,7 +170,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         defaultValue = "0";
       } else if (type.equals("char")){
         defaultValue = "";
-      } else if (type.equals("bool")) {
+      } else if (type.equals("boolean")) {
         defaultValue = "true";
       }
       node.addInstruction(String.format("%s[%d] = %s", id.getFirst(), id.getSecond(), defaultValue));
@@ -210,7 +210,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
           defaultValue = "0";
         } else if (type.equals("char")){
           defaultValue = "";
-        } else if (type.equals("bool")) {
+        } else if (type.equals("boolean")) {
           defaultValue = "true";
         }
         node.addInstruction(String.format("%s[%d] = array<%s, %s>", id.getFirst(), id.getSecond(), numValue, defaultValue));
@@ -476,8 +476,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitLocationStatement(ProyectoParser.LocationStatementContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("LocationStatement");
     Node node = new Node(treeNode);
-    node.add(visit(ctx.location()));
     node.add(visit(ctx.expression()));
+    node.add(visit(ctx.location()));
     try {
       Pair<String, Integer> tipoLocation = getLocationType(ctx.location());
       Pair<String, Integer> tipoExpression = getExpressionType(ctx.expression());
@@ -490,7 +490,13 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       } else {
         String id = ctx.location().ID().getText();
         Pair<String, Integer> pair = myTable.getOffset(id);
-        node.addInstruction(String.format("%s[%d] = T%s", pair.getFirst(), pair.getSecond(), getLastRegister()));
+        if(ctx.location().expression() != null) {
+          Data data = myTable.getVariable(id);
+          node.addInstruction(String.format("T%d = %d + (%d * T%d)", getLastRegister(), pair.getSecond(), data.getSize(), getRegister()));
+          node.addInstruction(String.format("%s[T%d] = T%s", pair.getFirst(), getLastRegister(), getLastRegister()));
+        } else {
+          node.addInstruction(String.format("%s[%d] = T%s", pair.getFirst(), pair.getSecond(), getLastRegister()));
+        }
       }
     } catch (NullPointerException e) {
         System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
@@ -537,9 +543,15 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionLocation");
     Node node = new Node(treeNode);
     node.add(visit(ctx.location()));
+    String id = ctx.location().ID().getText();
     Pair<String, Integer> pair = myTable.getOffset(ctx.location().ID().getText());
-    node.addInstruction(String.format("T%d = %s[%d]", getRegister(), pair.getFirst(), pair.getSecond()));
-
+    if(ctx.location().expression() != null) {
+      Data data = myTable.getVariable(id);
+      node.addInstruction(String.format("T%d = %d + (%d * T%d)", getLastRegister(), pair.getSecond(), data.getSize(), getRegister()));
+      node.addInstruction(String.format("T%d = %s[T%d]", getRegister(), pair.getFirst(), getLastRegister()));
+    } else {
+      node.addInstruction(String.format("T%d = %s[%d]", getRegister(), pair.getFirst(), pair.getSecond()));
+    }
     return node;
   }
 
