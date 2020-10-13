@@ -3,6 +3,8 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.swing.tree.DefaultMutableTreeNode;
+
+import java.beans.Expression;
 import java.util.*; 
 
 
@@ -394,32 +396,69 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     return node;
   }
 
+  public Node shortCircuitExpression(Node node, ProyectoParser.ExpressionContext ctx, Integer firstLabel, Integer secondLabel) {
+    if (ctx.getClass() != ProyectoParser.ExpressionCommonContext.class){
+      node.add(visit(ctx));
+      node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+    } else {
+      ProyectoParser.ExpressionCommonContext expresionCommon = (ProyectoParser.ExpressionCommonContext) ctx;
+      if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("&&")) {
+        node.add(visit(expresionCommon.expression(0)));
+        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
+        node.add(visit(expresionCommon.expression(1)));
+        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
+        //node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
+
+      } else if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("||")) {
+        node.add(visit(expresionCommon.expression(0)));
+        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+        node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
+      } else if (expresionCommon.op().eqOp() != null && expresionCommon.op().eqOp().simbol.getText().equals("!=")) {
+        //preguntar
+
+      } else {
+        node.add(visit(ctx));
+        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+      }
+    }
+    
+    return node;
+  }
+
   @Override public Node visitIfStatement(ProyectoParser.IfStatementContext ctx) { 
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("IfStatement");
     Node node = new Node(treeNode);
-    node.add(visit(ctx.expression()));
     try {
       if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
         System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
+      } else {
+        Integer label1 = createLabel();
+        Integer label2 = createLabel();
+        Integer label3 = createLabel();
+        node = shortCircuitExpression(node, ctx.expression(), label1, label2);
+        node.addInstruction(String.format("goto L%d", label2));
+        useLabel();
+        node.addInstruction(String.format("L%d:", label1));
+        // myTable.createEnviroment("IF");
+        //node.add(visit(ctx.block(0)));
+        node.addInstruction("BLOQUE1");
+        // myTable.returnEnviroment();
+        useLabel();
+        node.addInstruction(String.format("goto L%d", label3));
+        
+        node.addInstruction(String.format("L%d:", label2));
+        useLabel();
+        if (ctx.block(1) != null) {
+          //node.add(visit(ctx.block(1)));
+          node.addInstruction("BLOQUE2");
+          // myTable.returnEnviroment();
+        } 
+        node.addInstruction(String.format("L%d:", label3));
+
       }
     } catch (NullPointerException e) {
       System.out.println(String.format("%s: Caught the NullPointerException", ctx.start.getLine()));
     }
-    node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), createLabel()));
-
-    if (ctx.block(1) != null) {
-      // myTable.createEnviroment("ELSE");
-      node.add(visit(ctx.block(1)));
-      // myTable.returnEnviroment();
-    } 
-    node.addInstruction(String.format("goto L%d:", createLabel()));
-
-    node.addInstruction(String.format("L%d:", useLabel()));
-    // myTable.createEnviroment("IF");
-    node.add(visit(ctx.block(0)));
-    // myTable.returnEnviroment();
-
-    node.addInstruction(String.format("L%d:", useLabel()));
     return node;
   }
 
