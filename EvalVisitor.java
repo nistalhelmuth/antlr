@@ -1,7 +1,3 @@
-import java.util.Stack;  
-import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import java.beans.Expression;
@@ -16,12 +12,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   public Integer registerCount = 0;
 
   public EvalVisitor(){
-    freeRegisters.push(5);
-    freeRegisters.push(4);
-    freeRegisters.push(3);
-    freeRegisters.push(2);
-    freeRegisters.push(1);
-    freeRegisters.push(0);
+    freeRegisters.push(8);
+    freeRegisters.push(9);
+    freeRegisters.push(10);
   }
 
   private Integer getRegister(){
@@ -50,7 +43,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       return myTable.getStructVariable(ctx);
     }
     Data data = myTable.getVariable(ctx.ID().getText());
-    if (data!=null) {
+    if (data != null) {
       return data.tipo;
     } 
     System.out.println(String.format("%s: location <%s> doesnt exists", ctx.start.getLine(), ctx.ID().getText()));
@@ -126,6 +119,35 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     return null;
   }
 
+  public Node shortCircuitExpression(Node node, ProyectoParser.ExpressionContext ctx, Integer firstLabel, Integer secondLabel) {
+    if (ctx.getClass() != ProyectoParser.ExpressionCommonContext.class){
+      node.add(visit(ctx));
+      node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+    } else {
+      ProyectoParser.ExpressionCommonContext expresionCommon = (ProyectoParser.ExpressionCommonContext) ctx;
+      if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("&&")) {
+        node.add(visit(expresionCommon.expression(0)));
+        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
+        node.add(visit(expresionCommon.expression(1)));
+        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
+        //node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
+
+      } else if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("||")) {
+        node.add(visit(expresionCommon.expression(0)));
+        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+        node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
+      } else if (expresionCommon.op().eqOp() != null && expresionCommon.op().eqOp().simbol.getText().equals("!=")) {
+        // preguntar
+
+      } else {
+        node.add(visit(ctx));
+        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+      }
+    }
+    
+    return node;
+  }
+
   // Abstractions
 
 	@Override public Node visitProgram(ProyectoParser.ProgramContext ctx) { 
@@ -139,7 +161,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if (main == null || main.parametros == null){
       System.out.println(String.format("%s: Main is invalid or doesnt exits" ,ctx.start.getLine()));
     }
-    //myTable.show();
+    // myTable.show();
 
     return node; 
   }
@@ -176,7 +198,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         defaultValue = "true";
       }
       node.addInstruction(String.format("%s[%d] = %s", id.getFirst(), id.getSecond(), defaultValue));
-    } else { //maneja structs
+    } else {
+      // maneja structs
       if(ctx.varType().ID() != null) {
         myTable.putCommonVariable(ctx.varType().ID().getText(), "struct", ctx.ID().getText());
       } else {
@@ -191,7 +214,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("arrayVarDeclaration");
     Node node = new Node(treeNode);
     node.add(visit(ctx.varType()));
-
     Integer numValue;
     try {
       numValue = Integer.parseInt(ctx.NUM().getText());
@@ -203,9 +225,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       System.out.println(String.format("%s: Unavalible size for string %s", ctx.start.getLine(), ctx.ID().getText()));
     } else {
       if (ctx.varType().type != null) {
-        //revisar que NUM sea int
+        // revisar que NUM sea int
         Pair<String, Integer> id = myTable.putArrayVariable(ctx.varType().type.getText(), ctx.ID().getText(), numValue);
-        //agregar asignación a cada particion?
+        // agregar asignación a cada particion?
         String type = ctx.varType().type.getText();
         String defaultValue = "";
         if(type.equals("int")){
@@ -231,47 +253,74 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitStructDeclaration(ProyectoParser.StructDeclarationContext ctx) { 
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("structDeclaration");
     Node node = new Node(treeNode);
-    //node.add(visit(ctx.varType()));
 
-    LinkedHashMap<String, Pair<String, Integer>> variables = new LinkedHashMap<String, Pair<String, Integer>>();
-    ctx.varDeclaration().forEach(child -> {
-      // para que no se declaren los hijos
-      // node.add(visit(child));
-
+    List<Data> variables = new ArrayList<Data>();
+    Integer localOffset = 0;
+    for (ProyectoParser.VarDeclarationContext child : ctx.varDeclaration()) {
+      node.add(visit(child));
       //variables comunes
+      Data variable;
       if (child.getClass() == ProyectoParser.CommonVarDeclarationContext.class) {
         ProyectoParser.CommonVarDeclarationContext childVariable = (ProyectoParser.CommonVarDeclarationContext) child;
         // tipos normales
         if (childVariable.varType().type != null) {
-          Pair pair = new Pair<String, Integer>(childVariable.varType().type.getText());
-          variables.put(childVariable.ID().getText(), pair);
-        } else { //Structs dentro de structs
+          variable = new Data(
+            childVariable.ID().getText(),
+            childVariable.varType().type.getText(),
+            localOffset
+          );
+        } else { 
+          //Structs dentro de structs
           if(childVariable.varType().ID() != null) {
-            Pair pair = new Pair<String, Integer>(childVariable.varType().ID().getText());
-            variables.put(childVariable.ID().getText(), pair);
+            variable = new Data(
+              myTable.getVariable(childVariable.varType().ID().getText()),
+              childVariable.ID().getText(),
+              "struct",
+              localOffset
+            );
           } else {
-            Pair pair = new Pair<String, Integer>(childVariable.varType().structDeclaration().ID().getText());
-            variables.put(childVariable.ID().getText(), pair);
+            variable = new Data(
+              myTable.getVariable(childVariable.varType().structDeclaration().ID().getText()),
+              childVariable.ID().getText(),
+              "struct",
+              localOffset
+            );
           }
         }
-
-      } else { //varialbes array
+       //varialbes array
+      } else {
         ProyectoParser.ArrayVarDeclarationContext childArrayVariable = (ProyectoParser.ArrayVarDeclarationContext) child;
         // tipos normales
         if (childArrayVariable.varType().type != null) {
-          Pair pair = new Pair<String, Integer>(childArrayVariable.varType().type.getText(), Integer.parseInt(childArrayVariable.NUM().getText()));
-          variables.put(childArrayVariable.ID().getText(), pair);
+          variable = new Data(
+            childArrayVariable.ID().getText(),
+            childArrayVariable.varType().type.getText(),
+            Integer.parseInt(childArrayVariable.NUM().getText()),
+            localOffset
+          );
         } else { //Structs dentro de structs
           if(childArrayVariable.varType().ID() != null) {
-            Pair pair = new Pair<String, Integer>(childArrayVariable.varType().ID().getText(), Integer.parseInt(childArrayVariable.NUM().getText()));
-            variables.put(childArrayVariable.ID().getText(), pair);
+            variable = new Data(
+              myTable.getVariable(childArrayVariable.varType().ID().getText()),
+              childArrayVariable.ID().getText(),
+              "struct",
+              Integer.parseInt(childArrayVariable.NUM().getText()),
+              localOffset
+            );
           } else {
-            Pair pair = new Pair<String, Integer>(childArrayVariable.varType().structDeclaration().ID().getText(), Integer.parseInt(childArrayVariable.NUM().getText()));
-            variables.put(childArrayVariable.ID().getText(), pair);
+            variable = new Data(
+              myTable.getVariable(childArrayVariable.varType().structDeclaration().ID().getText()),
+              childArrayVariable.ID().getText(),
+              "struct",
+              Integer.parseInt(childArrayVariable.NUM().getText()),
+              localOffset
+            );
           }
         }
       }
-    });
+      localOffset = localOffset + variable.size;
+      variables.add(variable);
+    };
 
     myTable.putStructVariable(ctx.ID().getText(), variables);
     return node; 
@@ -280,9 +329,10 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitVarType(ProyectoParser.VarTypeContext ctx) { 
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("varType");
     Node node = new Node(treeNode);
-    
-    // falta el caso para evaluar structs
-    // visitChildren(ctx);
+
+    if (ctx.structDeclaration() != null) {
+      node.add(visit(ctx.structDeclaration()));
+    }
 
     return node; 
   }
@@ -290,9 +340,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitMethodDeclaration(ProyectoParser.MethodDeclarationContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("methodDeclaration");
     Node node = new Node(treeNode);
+    node.add(visit(ctx.methodType()));
 
     LinkedHashMap<String, Pair<String, Integer>> parameters = new LinkedHashMap<String, Pair<String, Integer>>();
-    node.add(visit(ctx.methodType()));
     ctx.parameter().forEach(child -> {
       if (child.getClass() == ProyectoParser.CommonParameterContext.class) {
         ProyectoParser.CommonParameterContext childParameter = (ProyectoParser.CommonParameterContext) child;
@@ -308,16 +358,16 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     myTable.putMethodVariable(ctx.methodType().type.getText(), ctx.ID().getText(), parameters);
 
     myTable.createEnviroment(ctx.ID().getText());
-    //add params as local variables
 
-    for (String id: parameters.keySet()) {
-      Pair<String, Integer> tipo = parameters.get(id);
-      if (tipo.getSecond() != null){
-        myTable.putArrayVariable(tipo.getFirst(), id, tipo.getSecond());
-      } else {
-        myTable.putCommonVariable(tipo.getFirst(), id);
-      }
-    }
+    //add params as local variables
+    // for (String id: parameters.keySet()) {
+    //   Pair<String, Integer> tipo = parameters.get(id);
+    //   if (tipo.getSecond() != null){
+    //     myTable.putArrayVariable(tipo.getFirst(), id, tipo.getSecond());
+    //   } else {
+    //     myTable.putCommonVariable(tipo.getFirst(), id);
+    //   }
+    // }
 
     Boolean flag = false;
     if (!ctx.methodType().type.getText().equals("void") && ctx.block().statement().size() == 0) {
@@ -393,35 +443,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     ctx.statement().forEach(child -> {
       node.add(visit(child));
     });
-    return node;
-  }
-
-  public Node shortCircuitExpression(Node node, ProyectoParser.ExpressionContext ctx, Integer firstLabel, Integer secondLabel) {
-    if (ctx.getClass() != ProyectoParser.ExpressionCommonContext.class){
-      node.add(visit(ctx));
-      node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
-    } else {
-      ProyectoParser.ExpressionCommonContext expresionCommon = (ProyectoParser.ExpressionCommonContext) ctx;
-      if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("&&")) {
-        node.add(visit(expresionCommon.expression(0)));
-        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
-        node.add(visit(expresionCommon.expression(1)));
-        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
-        //node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
-
-      } else if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("||")) {
-        node.add(visit(expresionCommon.expression(0)));
-        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
-        node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
-      } else if (expresionCommon.op().eqOp() != null && expresionCommon.op().eqOp().simbol.getText().equals("!=")) {
-        //preguntar
-
-      } else {
-        node.add(visit(ctx));
-        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
-      }
-    }
-    
     return node;
   }
 
@@ -533,6 +554,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         Pair<String, Integer> pair = myTable.getOffset(id);
         if(ctx.location().expression() != null) {
           Data data = myTable.getVariable(id);
+          // System.out.println(data);
+          // System.out.println(pair);
           node.addInstruction(String.format("T%d = %d + (%d * T%d)", getLastRegister(), pair.getSecond(), data.getSize(), getRegister()));
           node.addInstruction(String.format("%s[T%d] = T%s", pair.getFirst(), getLastRegister(), getLastRegister()));
         } else {
@@ -583,7 +606,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   @Override public Node visitExpressionLocation(ProyectoParser.ExpressionLocationContext ctx) {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("ExpressionLocation");
     Node node = new Node(treeNode);
+
     node.add(visit(ctx.location()));
+
     String id = ctx.location().ID().getText();
     Pair<String, Integer> pair = myTable.getOffset(ctx.location().ID().getText());
     if(ctx.location().expression() != null) {

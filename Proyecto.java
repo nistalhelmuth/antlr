@@ -31,7 +31,7 @@ public class Proyecto {
     EvalVisitor eval = new EvalVisitor();
     //DefaultMutableTreeNode node = eval.visit(tree);
     Node root = eval.visit(tree);
-    root.translate();
+    // root.translate();
     
     // JFrame frame = new JFrame("Demo");  
     // JTree jtree = new JTree(root.tree);

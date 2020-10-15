@@ -3,28 +3,26 @@ class Program
 
 struct A
 {
-	int a;
-}; //este ';' no esta definido en las reglas originales
-
+	int x;
+};
 
 struct B
 {
-	int b[5];
-	struct A c;
+	struct A a;
 };
 
-int factorial(int n)
+struct C
 {
-  return 0;
-}
+	struct B b;
+};
 
 void main()
 {
-  struct B y[5];
-  int j;
-  j=0;
-
-  y[j].c.a=factorial(y[j].b[0]);
+  struct C c;
+  //a.x = 1;
+  // struct C c;
+  // b[0].a.x = 1;
+  c.b.a.x = 1;
 }
 
 
