@@ -99,6 +99,20 @@ final class Enviroment {
     return null;
   }
 
+  public Pair<String, Integer> getOffset(String id) {
+    if (localdata.containsKey(id)) {
+      Data data = localdata.get(id);
+      if(data.tipo.getFirst().equals("struct") && data.dependencia != null){
+        return new Pair<String, Integer>(this.id, data.dependencia.offset);
+      }
+      return new Pair<String, Integer>(this.id, data.offset);
+    } else if (father != null){
+      return father.getOffset(id);
+    }
+    System.out.println(String.format("variable %s doesnt exists", id));
+    return null;
+  }
+
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx) {
     Pair<String, Integer> tipo = null;
     Data data = null;
@@ -220,7 +234,7 @@ public class SimbolTable {
 
   public Pair<String, Integer> getOffset(String id){
     Enviroment currentEnviroment = enviroments.get(enviromentStack.peek());
-    return new Pair<String, Integer> (currentEnviroment.id, currentEnviroment.getVariable(id).offset);
+    return currentEnviroment.getOffset(id);
   }
 
   public Pair<String, Integer> getStructVariable(ProyectoParser.LocationContext ctx){

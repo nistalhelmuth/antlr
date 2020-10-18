@@ -16,7 +16,7 @@ LETTER : [a-zA-Z];
 
 DIGIT : [0-9]+;
 
-WHITE : [ \t\n]+ -> skip ; // skip spaces, tabs, newlines
+WHITE : [ \t\n\r]+ -> skip ; // skip spaces, tabs, newlines
 
 LINE_COMMENT : '//' .*? ('\n' | '\r') -> skip ;
 

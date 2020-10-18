@@ -1,48 +1,28 @@
 import javax.swing.tree.DefaultMutableTreeNode;
-
-import java.beans.Expression;
 import java.util.*; 
 
 
 public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   public SimbolTable myTable = new SimbolTable();
-  public Stack<Integer> freeRegisters = new Stack<Integer>();
-  public Stack<Integer> usedRegisters = new Stack<Integer>();
-  public Deque<Integer> usedLabels = new LinkedList<Integer>();
-  public Integer registerCount = 0;
-
-  public EvalVisitor(){
-    freeRegisters.push(8);
-    freeRegisters.push(9);
-    freeRegisters.push(10);
-  }
-
-  private Integer getRegister(){
-    Integer reg = freeRegisters.pop();
-    usedRegisters.push(reg);
-    return reg;
-  }
-
-  private Integer getLastRegister(){
-    Integer reg = usedRegisters.pop();
-    freeRegisters.push(reg);
-    return reg;
-  }
-
-  private Integer createLabel(){
-    usedLabels.push(usedLabels.size());
-    return usedLabels.peek();
-  }
-
-  private Integer useLabel(){
-    return usedLabels.pollLast();
-  }
+  public ARMArquitecture myARM = new ARMArquitecture();
 
   private Pair<String, Integer> getLocationType(ProyectoParser.LocationContext ctx){
+    Data data = null;
     if (ctx.location() != null) {
-      return myTable.getStructVariable(ctx);
+      while(ctx.location() != null){
+        if (data != null) {
+          data = data.dependencia;
+        } else {
+          data = myTable.getVariable(ctx.ID().getText());
+        }
+        if (data.variables.containsKey(ctx.location().ID().getText())) {
+          data = data.variables.get(ctx.location().ID().getText());
+        } 
+        ctx = ctx.location();
+      }
+    } else {
+      data = myTable.getVariable(ctx.ID().getText());
     }
-    Data data = myTable.getVariable(ctx.ID().getText());
     if (data != null) {
       return data.tipo;
     } 
@@ -69,8 +49,6 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       }
     } else if(ctx.getClass() == ProyectoParser.ExpressionCommonContext.class) {
       ProyectoParser.ExpressionCommonContext test = (ProyectoParser.ExpressionCommonContext) ctx;
-
-
       Pair<String, Integer> tipo0 = getExpressionType(test.expression(0));
       Pair<String, Integer> tipo1 = getExpressionType(test.expression(1));
       if(test.op().arithOp() != null || test.op().highArithOp() != null) {
@@ -122,26 +100,23 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
   public Node shortCircuitExpression(Node node, ProyectoParser.ExpressionContext ctx, Integer firstLabel, Integer secondLabel) {
     if (ctx.getClass() != ProyectoParser.ExpressionCommonContext.class){
       node.add(visit(ctx));
-      node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+      node.addInstruction(String.format("IF T%d goto L%d", myARM.getLastRegister(), firstLabel));
     } else {
       ProyectoParser.ExpressionCommonContext expresionCommon = (ProyectoParser.ExpressionCommonContext) ctx;
       if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("&&")) {
         node.add(visit(expresionCommon.expression(0)));
-        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
+        node.addInstruction(String.format("IFNOT T%d goto L%d", myARM.getLastRegister(), secondLabel));
         node.add(visit(expresionCommon.expression(1)));
-        node.addInstruction(String.format("IFNOT T%d goto L%d", getLastRegister(), secondLabel));
+        node.addInstruction(String.format("IFNOT T%d goto L%d", myARM.getLastRegister(), secondLabel));
         //node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
 
       } else if (expresionCommon.op().condOp() != null && expresionCommon.op().condOp().simbol.getText().equals("||")) {
         node.add(visit(expresionCommon.expression(0)));
-        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+        node.addInstruction(String.format("IF T%d goto L%d", myARM.getLastRegister(), firstLabel));
         node = shortCircuitExpression(node, expresionCommon.expression(1), firstLabel, secondLabel);
-      } else if (expresionCommon.op().eqOp() != null && expresionCommon.op().eqOp().simbol.getText().equals("!=")) {
-        // preguntar
-
       } else {
         node.add(visit(ctx));
-        node.addInstruction(String.format("IF T%d goto L%d", getLastRegister(), firstLabel));
+        node.addInstruction(String.format("IF T%d goto L%d", myARM.getLastRegister(), firstLabel));
       }
     }
     
@@ -186,10 +161,11 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     Node node = new Node(treeNode);
     node.add(visit(ctx.varType()));
 
+    Pair<String, Integer> id;
+    String defaultValue = "";
     if (ctx.varType().type != null) {
-      Pair<String, Integer> id = myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
+      id = myTable.putCommonVariable(ctx.varType().type.getText(), ctx.ID().getText());
       String type = ctx.varType().type.getText();
-      String defaultValue = "";
       if(type.equals("int")){
         defaultValue = "0";
       } else if (type.equals("char")){
@@ -197,16 +173,16 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       } else if (type.equals("boolean")) {
         defaultValue = "true";
       }
-      node.addInstruction(String.format("%s[%d] = %s", id.getFirst(), id.getSecond(), defaultValue));
     } else {
       // maneja structs
       if(ctx.varType().ID() != null) {
-        myTable.putCommonVariable(ctx.varType().ID().getText(), "struct", ctx.ID().getText());
+        id = myTable.putCommonVariable(ctx.varType().ID().getText(), "struct", ctx.ID().getText());
       } else {
-        myTable.putCommonVariable(ctx.varType().structDeclaration().ID().getText(), "struct", ctx.ID().getText());
+        id = myTable.putCommonVariable(ctx.varType().structDeclaration().ID().getText(), "struct", ctx.ID().getText());
       }
-    }  
-
+      defaultValue = "<struct>";
+    }
+    node.addInstruction(String.format("%s[%d] = %s", id.getFirst(), id.getSecond(), defaultValue));
     return node; 
   }
 
@@ -257,7 +233,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     List<Data> variables = new ArrayList<Data>();
     Integer localOffset = 0;
     for (ProyectoParser.VarDeclarationContext child : ctx.varDeclaration()) {
-      node.add(visit(child));
+      // node.add(visit(child));
       //variables comunes
       Data variable;
       if (child.getClass() == ProyectoParser.CommonVarDeclarationContext.class) {
@@ -321,8 +297,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       localOffset = localOffset + variable.size;
       variables.add(variable);
     };
-
-    myTable.putStructVariable(ctx.ID().getText(), variables);
+    Pair<String, Integer> id = myTable.putStructVariable(ctx.ID().getText(), variables);
+    node.addInstruction(String.format("%s[%d] = <struct>", id.getFirst(), id.getSecond()));
     return node; 
   }
 
@@ -341,6 +317,11 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode("methodDeclaration");
     Node node = new Node(treeNode);
     node.add(visit(ctx.methodType()));
+    node.addInstruction(String.format("\n\t%s:", ctx.ID().getText()));
+    // node.addInstruction("push {r11, lr}");
+    // node.addInstruction("add r11, sp, #0");
+    // node.addInstruction("sub sp, sp, #16");
+    node.addInstruction("//prologue");
 
     LinkedHashMap<String, Pair<String, Integer>> parameters = new LinkedHashMap<String, Pair<String, Integer>>();
     ctx.parameter().forEach(child -> {
@@ -348,28 +329,42 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         ProyectoParser.CommonParameterContext childParameter = (ProyectoParser.CommonParameterContext) child;
         Pair pair = new Pair<String, Integer>(childParameter.parameterType().type.getText());
         parameters.put(childParameter.ID().getText(), pair);
+        // node.addInstruction(String.format("POP T%s", myARM.getParam()));
       } else {
         ProyectoParser.ArrayParameterContext childArrayParameter = (ProyectoParser.ArrayParameterContext) child;
         Pair pair = new Pair<String, Integer>(childArrayParameter.parameterType().type.getText(), 0);
         parameters.put(childArrayParameter.ID().getText(), pair);
+        // node.addInstruction(String.format("POP T%s", myARM.getParam()));
       }
       node.add(visit(child));
     });
+    myARM.freeParams();
     myTable.putMethodVariable(ctx.methodType().type.getText(), ctx.ID().getText(), parameters);
 
     myTable.createEnviroment(ctx.ID().getText());
 
     //add params as local variables
-    // for (String id: parameters.keySet()) {
-    //   Pair<String, Integer> tipo = parameters.get(id);
-    //   if (tipo.getSecond() != null){
-    //     myTable.putArrayVariable(tipo.getFirst(), id, tipo.getSecond());
-    //   } else {
-    //     myTable.putCommonVariable(tipo.getFirst(), id);
-    //   }
-    // }
+    for (String id: parameters.keySet()) {
+      Pair<String, Integer> tipo = parameters.get(id);
+      Pair<String, Integer> pair;
+      if (tipo.getSecond() != null){
+        pair = myTable.putArrayVariable(tipo.getFirst(), id, tipo.getSecond());
+        node.addInstruction(String.format("POP T%s", myARM.getParam()));
+      } else {
+        pair = myTable.putCommonVariable(tipo.getFirst(), id);
+        // mover parametro a variable
+      }
+      node.addInstruction(String.format("POP %s[%d] T%s", pair.getFirst(), pair.getSecond(), myARM.getParam()));
+    }
+    myARM.freeParams();
+
+    node.add(visit(ctx.block()));
+    node.addInstruction("//epilogue");
+    //node.addInstruction("sub sp, r11, #0");
+    //node.addInstruction("pop {r11, pc} ");
 
     Boolean flag = false;
+    // Boolean leafMethod = false;
     if (!ctx.methodType().type.getText().equals("void") && ctx.block().statement().size() == 0) {
       flag = true;
     }
@@ -379,6 +374,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         if (returnExpr.expression() != null && ctx.methodType().type.getText().equals("void")) {
           flag = true;
         } else {
+
           try {
             Pair<String, Integer> type = getExpressionType(returnExpr.expression());
             if(
@@ -394,12 +390,15 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
         }
       }
     }
+
     if(flag){
       System.out.println(String.format("%s: Check return type on <%s>", ctx.start.getLine(), ctx.ID().getText()));
-    }
-    node.add(visit(ctx.block()));
-    myTable.returnEnviroment();
+    } else {
 
+    }
+    
+
+    myTable.returnEnviroment();
     return node; 
   }
 
@@ -453,20 +452,20 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
         System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
       } else {
-        Integer label1 = createLabel();
-        Integer label2 = createLabel();
-        Integer label3 = createLabel();
+        Integer label1 = myARM.createLabel();
+        Integer label2 = myARM.createLabel();
+        Integer label3 = myARM.createLabel();
         node = shortCircuitExpression(node, ctx.expression(), label1, label2);
         node.addInstruction(String.format("goto L%d", label2));
-        useLabel();
+        myARM.useLabel();
         node.addInstruction(String.format("L%d:", label1));
         myTable.createEnviroment(String.format("%s-IF", myTable.peekEnviroment()));
         node.add(visit(ctx.block(0)));
         myTable.returnEnviroment();
-        useLabel();
+        myARM.useLabel();
         node.addInstruction(String.format("goto L%d", label3));
         node.addInstruction(String.format("L%d:", label2));
-        useLabel();
+        myARM.useLabel();
         if (ctx.block(1) != null) {
           myTable.createEnviroment(String.format("%s-ELSE", myTable.peekEnviroment()));
           node.add(visit(ctx.block(1)));
@@ -486,21 +485,21 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if (!getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))){
       System.out.println(String.format("%s: expression on if has to be boolean", ctx.start.getLine()));
     } else {
-      Integer label1 = createLabel();
-      Integer label2 = createLabel();
-      Integer label3 = createLabel();
+      Integer label1 = myARM.createLabel();
+      Integer label2 = myARM.createLabel();
+      Integer label3 = myARM.createLabel();
       
-      useLabel();
+      myARM.useLabel();
       node.addInstruction(String.format("L%d:", label1));
       node = shortCircuitExpression(node, ctx.expression(), label2, label3);
       node.addInstruction(String.format("goto L%d", label3));
-      useLabel();
+      myARM.useLabel();
       node.addInstruction(String.format("L%d:", label2));
       myTable.createEnviroment(String.format("%s-WHILE", myTable.peekEnviroment()));
       node.add(visit(ctx.block()));
       myTable.returnEnviroment();
       node.addInstruction(String.format("goto L%d", label1));
-      useLabel();
+      myARM.useLabel();
       node.addInstruction(String.format("L%d:", label3));
     }
     return node;
@@ -511,6 +510,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     Node node = new Node(treeNode);
     if (ctx.expression() != null) {
       node.add(visit(ctx.expression()));
+      node.addInstruction(String.format("PUSH T0 T%d", myARM.getLastRegister()));
     };
     return node;
   }
@@ -523,6 +523,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     Data methodDefinition = myTable.getVariable(ctx.methodCall().ID().getText());
     if (methodDefinition == null) {
       System.out.println(String.format("%s: method <%s> hasn't been declarated", ctx.start.getLine(), ctx.methodCall().ID().getText()));
+    } else {
+      
     }
 
     return node;
@@ -550,16 +552,35 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       } else if(!tipoLocation.getFirst().equals(tipoExpression.getFirst())){
         System.out.println(String.format("%s: Check types of location and expression", ctx.start.getLine()));
       } else {
-        String id = ctx.location().ID().getText();
-        Pair<String, Integer> pair = myTable.getOffset(id);
-        if(ctx.location().expression() != null) {
-          Data data = myTable.getVariable(id);
-          // System.out.println(data);
-          // System.out.println(pair);
-          node.addInstruction(String.format("T%d = %d + (%d * T%d)", getLastRegister(), pair.getSecond(), data.getSize(), getRegister()));
-          node.addInstruction(String.format("%s[T%d] = T%s", pair.getFirst(), getLastRegister(), getLastRegister()));
+        if(ctx.location().location() == null){
+          String id = ctx.location().ID().getText();
+          Pair<String, Integer> pair = myTable.getOffset(id);
+          if(ctx.location().expression() != null) {
+            Data data = myTable.getVariable(id);
+            node.addInstruction(String.format("T%d = %d + (%d * T%d)", myARM.getLastRegister(), pair.getSecond(), data.getSize(), myARM.getRegister()));
+            node.addInstruction(String.format("%s[T%d] = T%s", pair.getFirst(), myARM.getLastRegister(), myARM.getLastRegister()));
+          } else {
+            node.addInstruction(String.format("%s[%d] = T%s", pair.getFirst(), pair.getSecond(), myARM.getLastRegister()));
+          }
         } else {
-          node.addInstruction(String.format("%s[%d] = T%s", pair.getFirst(), pair.getSecond(), getLastRegister()));
+          String id = ctx.location().ID().getText();
+          Pair<String, Integer> pair = myTable.getOffset(id);
+          Integer localOffset = pair.getSecond();
+          Data data = null;
+          ProyectoParser.LocationContext localCtx = (ProyectoParser.LocationContext) ctx.location();
+          while(localCtx.location() != null){
+            if (data != null) {
+              data = data.dependencia;
+            } else {
+              data = myTable.getVariable(localCtx.ID().getText());
+            }
+            if (data.variables.containsKey(localCtx.location().ID().getText())) {
+              data = data.variables.get(localCtx.location().ID().getText());
+              localOffset = data.offset;
+            } 
+            localCtx = localCtx.location();
+          }
+          node.addInstruction(String.format("%s[%d] = T%s", pair.getFirst(), localOffset, myARM.getLastRegister()));
         }
       }
     } catch (NullPointerException e) {
@@ -608,16 +629,38 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     Node node = new Node(treeNode);
 
     node.add(visit(ctx.location()));
-
-    String id = ctx.location().ID().getText();
-    Pair<String, Integer> pair = myTable.getOffset(ctx.location().ID().getText());
-    if(ctx.location().expression() != null) {
-      Data data = myTable.getVariable(id);
-      node.addInstruction(String.format("T%d = %d + (%d * T%d)", getLastRegister(), pair.getSecond(), data.getSize(), getRegister()));
-      node.addInstruction(String.format("T%d = %s[T%d]", getRegister(), pair.getFirst(), getLastRegister()));
+    if(ctx.location().location() == null){
+      String id = ctx.location().ID().getText();
+      Pair<String, Integer> pair = myTable.getOffset(ctx.location().ID().getText());
+      if(ctx.location().expression() != null) {
+        Data data = myTable.getVariable(id);
+        node.addInstruction(String.format("T%d = %d + (%d * T%d)", myARM.getLastRegister(), pair.getSecond(), data.getSize(), myARM.getRegister()));
+        node.addInstruction(String.format("T%d = %s[T%d]", myARM.getRegister(), pair.getFirst(), myARM.getLastRegister()));
+      } else {
+        node.addInstruction(String.format("T%d = %s[%d]", myARM.getRegister(), pair.getFirst(), pair.getSecond()));
+      }
     } else {
-      node.addInstruction(String.format("T%d = %s[%d]", getRegister(), pair.getFirst(), pair.getSecond()));
+      String id = ctx.location().ID().getText();
+      Pair<String, Integer> pair = myTable.getOffset(id);
+      Integer localOffset = pair.getSecond();
+      Data data = null;
+      ProyectoParser.LocationContext localCtx = (ProyectoParser.LocationContext) ctx.location();
+      while(localCtx.location() != null){
+        if (data != null) {
+          data = data.dependencia;
+        } else {
+          data = myTable.getVariable(localCtx.ID().getText());
+        }
+        if (data.variables.containsKey(localCtx.location().ID().getText())) {
+          data = data.variables.get(localCtx.location().ID().getText());
+          localOffset = data.offset;
+        } 
+        localCtx = localCtx.location();
+      }
+      node.addInstruction(String.format("T%s = %s[%d]", pair.getFirst(), localOffset, myARM.getLastRegister()));
     }
+
+    
     return node;
   }
 
@@ -643,15 +686,15 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     node.add(visit(ctx.literal()));
     if(ctx.literal().getClass() == ProyectoParser.IntLiteralContext.class){
       ProyectoParser.IntLiteralContext literalType = (ProyectoParser.IntLiteralContext) ctx.literal();
-      node.addInstruction(String.format("T%d = %s", getRegister(), literalType.NUM().getText()));
+      node.addInstruction(String.format("T%d = %s", myARM.getRegister(), literalType.NUM().getText()));
 
     } else if(ctx.literal().getClass() == ProyectoParser.CharLiteralContext.class){
       ProyectoParser.CharLiteralContext literalType = (ProyectoParser.CharLiteralContext) ctx.literal();
-      node.addInstruction(String.format("T%d = %s", getRegister(), literalType.CHAR().getText()));
+      node.addInstruction(String.format("T%d = %s", myARM.getRegister(), literalType.CHAR().getText()));
 
     } else if (ctx.literal().getClass() == ProyectoParser.BoolLiteralContext.class){
       ProyectoParser.BoolLiteralContext literalType = (ProyectoParser.BoolLiteralContext) ctx.literal();
-      node.addInstruction(String.format("T%d = %s", getRegister(), literalType.BOOL().getText()));
+      node.addInstruction(String.format("T%d = %s", myARM.getRegister(), literalType.BOOL().getText()));
 
     } else {
       System.out.println("unknown literal");
@@ -667,8 +710,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     node.add(visit(ctx.op()));
     node.add(visit(ctx.expression(1)));
 
-    Integer temp2 = getLastRegister();
-    Integer temp1 = getLastRegister();
+    Integer temp2 = myARM.getLastRegister();
+    Integer temp1 = myARM.getLastRegister();
     try {
       Pair<String, Integer> tipo0 = getExpressionType(ctx.expression(0));
       Pair<String, Integer> tipo1 = getExpressionType(ctx.expression(1));
@@ -678,9 +721,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         } else {
           if(ctx.op().highArithOp().simbol.getText().equals("*")){
-            node.addInstruction(String.format("T%d = T%d * T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d * T%d", myARM.getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("T%d = T%d / T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d / T%d", myARM.getRegister(), temp1, temp2));
           }
         }
       } else if(ctx.op().arithOp() != null) {
@@ -688,11 +731,11 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         } else {
           if(ctx.op().arithOp().simbol.getText().equals("+")){
-            node.addInstruction(String.format("T%d = T%d + T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d + T%d", myARM.getRegister(), temp1, temp2));
           } else if(ctx.op().arithOp().simbol.getText().equals("-")) {
-            node.addInstruction(String.format("T%d = T%d - T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d - T%d", myARM.getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("T%d = T%d % T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d %s T%d", myARM.getRegister(), temp1, "%", temp2));
           }
         }
       } else if(ctx.op().relOp() != null) {
@@ -700,13 +743,13 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
           System.out.println(String.format("Check types of %s: expression must be integer", ctx.start.getLine()));
         } else {
           if(ctx.op().relOp().simbol.getText().equals("<")){
-            node.addInstruction(String.format("T%d = T%d < T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d < T%d", myARM.getRegister(), temp1, temp2));
           } else if(ctx.op().relOp().simbol.getText().equals(">")){
-            node.addInstruction(String.format("T%d = T%d > T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d > T%d", myARM.getRegister(), temp1, temp2));
           } else if(ctx.op().relOp().simbol.getText().equals("<=")){
-            node.addInstruction(String.format("T%d = T%d <= T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d <= T%d", myARM.getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("T%d = T%d >= T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d >= T%d", myARM.getRegister(), temp1, temp2));
           }
         }
       } else if(ctx.op().eqOp() != null) {
@@ -714,9 +757,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
           System.out.println(String.format("Check types of %s: expression must be equal", ctx.start.getLine()));
         } else {
           if(ctx.op().eqOp().simbol.getText().equals("==")){
-            node.addInstruction(String.format("T%d = T%d == T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d == T%d", myARM.getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("T%d = T%d != T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d != T%d", myARM.getRegister(), temp1, temp2));
           }
         }
       } else if(ctx.op().condOp() != null) {
@@ -724,9 +767,9 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
           System.out.println(String.format("Check types of %s: expression must be boolean", ctx.start.getLine()));
         } else {
           if(ctx.op().condOp().simbol.getText().equals("&&")){
-            node.addInstruction(String.format("T%d = T%d && T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d && T%d", myARM.getRegister(), temp1, temp2));
           } else {
-            node.addInstruction(String.format("T%d = T%d || T%d", getRegister(), temp1, temp2));
+            node.addInstruction(String.format("T%d = T%d || T%d", myARM.getRegister(), temp1, temp2));
           }
         }
       } else {
@@ -745,8 +788,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("int"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
     }
-    Integer last = getLastRegister();
-    node.addInstruction(String.format("T%d = -T%s", getRegister(), last));
+    Integer last = myARM.getLastRegister();
+    node.addInstruction(String.format("T%d = -T%s", myARM.getRegister(), last));
     return node;
   }
 
@@ -757,8 +800,8 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
     if(getExpressionType(ctx.expression()).equals(new Pair<String, Integer>("boolean"))) {
       System.out.println(String.format("%s: Check type of expression must be integer", ctx.start.getLine()));
     }
-    Integer last = getLastRegister();
-    node.addInstruction(String.format("T%d = !T%s", getRegister(), last));
+    Integer last = myARM.getLastRegister();
+    node.addInstruction(String.format("T%d = !T%s", myARM.getRegister(), last));
     return node;
   }
 
@@ -781,6 +824,7 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
       Integer i = 0;
       for ( ProyectoParser.ExpressionContext child : ctx.expression()){
         node.add(visit(child));
+
         Pair<String, Integer> expressionType = getExpressionType(child);
         if (i < methodDefinition.parametros.values().toArray().length){
           Pair<String, Integer> param = (Pair<String,Integer>) methodDefinition.parametros.values().toArray()[i];
@@ -791,18 +835,19 @@ public class EvalVisitor extends ProyectoBaseVisitor<Node> {
               methodDefinition.id
             ));
           } else {
-            node.addInstruction(String.format("PARAM T%s", getLastRegister()));
+            node.addInstruction(String.format("PUSH T%s, T%s", myARM.getParam(), myARM.getLastRegister()));
           }
         } else {
           System.out.println(String.format("%s: more params than needed on method <%s>", ctx.start.getLine(), methodDefinition.id)); 
         }
         i = i+1;
       }
+      myARM.freeParams();
       if (methodDefinition.tipo.equals(new Pair<String, Integer>("void"))) {
         node.addInstruction(String.format("CALL %s, %d", methodDefinition.id, i));
-      } else {
-        node.addInstruction(String.format("T%s = CALL %s, %d", getRegister(), methodDefinition.id, i));
-      }
+      } /**else {
+        node.addInstruction(String.format("T0 = CALL %s, %d", methodDefinition.id, i));
+      }*/
     }
     return node;
   }

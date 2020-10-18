@@ -1367,12 +1367,6 @@ public class ProyectoParser extends Parser {
 	}
 
 	public static class OpContext extends ParserRuleContext {
-		public HighArithOpContext highArithOp() {
-			return getRuleContext(HighArithOpContext.class,0);
-		}
-		public ArithOpContext arithOp() {
-			return getRuleContext(ArithOpContext.class,0);
-		}
 		public RelOpContext relOp() {
 			return getRuleContext(RelOpContext.class,0);
 		}
@@ -1381,6 +1375,12 @@ public class ProyectoParser extends Parser {
 		}
 		public CondOpContext condOp() {
 			return getRuleContext(CondOpContext.class,0);
+		}
+		public HighArithOpContext highArithOp() {
+			return getRuleContext(HighArithOpContext.class,0);
+		}
+		public ArithOpContext arithOp() {
+			return getRuleContext(ArithOpContext.class,0);
 		}
 		public OpContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -1400,47 +1400,47 @@ public class ProyectoParser extends Parser {
 			setState(222);
 			_errHandler.sync(this);
 			switch (_input.LA(1)) {
-			case T__23:
-			case T__24:
+			case T__27:
+			case T__28:
+			case T__29:
+			case T__30:
 				enterOuterAlt(_localctx, 1);
 				{
 				setState(217);
+				relOp();
+				}
+				break;
+			case T__31:
+			case T__32:
+				enterOuterAlt(_localctx, 2);
+				{
+				setState(218);
+				eqOp();
+				}
+				break;
+			case T__33:
+			case T__34:
+				enterOuterAlt(_localctx, 3);
+				{
+				setState(219);
+				condOp();
+				}
+				break;
+			case T__23:
+			case T__24:
+				enterOuterAlt(_localctx, 4);
+				{
+				setState(220);
 				highArithOp();
 				}
 				break;
 			case T__21:
 			case T__25:
 			case T__26:
-				enterOuterAlt(_localctx, 2);
-				{
-				setState(218);
-				arithOp();
-				}
-				break;
-			case T__27:
-			case T__28:
-			case T__29:
-			case T__30:
-				enterOuterAlt(_localctx, 3);
-				{
-				setState(219);
-				relOp();
-				}
-				break;
-			case T__31:
-			case T__32:
-				enterOuterAlt(_localctx, 4);
-				{
-				setState(220);
-				eqOp();
-				}
-				break;
-			case T__33:
-			case T__34:
 				enterOuterAlt(_localctx, 5);
 				{
 				setState(221);
-				condOp();
+				arithOp();
 				}
 				break;
 			default:
@@ -1849,9 +1849,9 @@ public class ProyectoParser extends Parser {
 		"\u00d0\u00d1\3\2\2\2\u00d1\u00d6\3\2\2\2\u00d2\u00d3\7\20\2\2\u00d3\u00d5"+
 		"\5\32\16\2\u00d4\u00d2\3\2\2\2\u00d5\u00d8\3\2\2\2\u00d6\u00d4\3\2\2\2"+
 		"\u00d6\u00d7\3\2\2\2\u00d7\u00d9\3\2\2\2\u00d8\u00d6\3\2\2\2\u00d9\u00da"+
-		"\7\21\2\2\u00da\35\3\2\2\2\u00db\u00e1\5 \21\2\u00dc\u00e1\5\"\22\2\u00dd"+
-		"\u00e1\5$\23\2\u00de\u00e1\5&\24\2\u00df\u00e1\5(\25\2\u00e0\u00db\3\2"+
-		"\2\2\u00e0\u00dc\3\2\2\2\u00e0\u00dd\3\2\2\2\u00e0\u00de\3\2\2\2\u00e0"+
+		"\7\21\2\2\u00da\35\3\2\2\2\u00db\u00e1\5$\23\2\u00dc\u00e1\5&\24\2\u00dd"+
+		"\u00e1\5(\25\2\u00de\u00e1\5 \21\2\u00df\u00e1\5\"\22\2\u00e0\u00db\3"+
+		"\2\2\2\u00e0\u00dc\3\2\2\2\u00e0\u00dd\3\2\2\2\u00e0\u00de\3\2\2\2\u00e0"+
 		"\u00df\3\2\2\2\u00e1\37\3\2\2\2\u00e2\u00e3\t\4\2\2\u00e3!\3\2\2\2\u00e4"+
 		"\u00e5\t\5\2\2\u00e5#\3\2\2\2\u00e6\u00e7\t\6\2\2\u00e7%\3\2\2\2\u00e8"+
 		"\u00e9\t\7\2\2\u00e9\'\3\2\2\2\u00ea\u00eb\t\b\2\2\u00eb)\3\2\2\2\u00ec"+
