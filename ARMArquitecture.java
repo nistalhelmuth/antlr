@@ -11,7 +11,9 @@ public class ARMArquitecture {
   public ARMArquitecture() {
     this.freeRegisters.push(10);
     this.freeRegisters.push(9);
-    this.freeParams.push(8);
+    this.freeRegisters.push(8);
+    this.freeRegisters.push(6);
+    this.freeRegisters.push(5);
 
     this.freeParams.push(4);
     this.freeParams.push(3);

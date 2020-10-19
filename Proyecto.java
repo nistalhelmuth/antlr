@@ -99,7 +99,8 @@ public class Proyecto {
       panel = new JPanel(false);
       panel.setLayout(new GridLayout(1, 1));
       final JTextArea intermedioTA = new JTextArea();
-      panel.add(intermedioTA);
+      JScrollPane sp = new JScrollPane(intermedioTA);
+      panel.add(sp);
       tabbedPane.addTab("Intermedio", panel);
       tabbedPane.setMnemonicAt(2, KeyEvent.VK_3);
 
